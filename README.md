@@ -1,5 +1,11 @@
 # Marginalia
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Trivy](https://github.com/ANDRS-Projects/marginalia/actions/workflows/trivy.yml/badge.svg)](https://github.com/ANDRS-Projects/marginalia/actions/workflows/trivy.yml)
+[![Gitleaks](https://github.com/ANDRS-Projects/marginalia/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/ANDRS-Projects/marginalia/actions/workflows/gitleaks.yml)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-6f42c1)](index.html)
+[![CLAUDE.md](https://img.shields.io/badge/CLAUDE.md-✓-6f42c1)](CLAUDE.md)
+
 A quiet corner before the busy work — a breathing circle, a thoughtful quote,
 book picks, and sticky notes tucked at the edge of the screen. Notes save
 only to your own browser (`localStorage`); nothing leaves your device.
