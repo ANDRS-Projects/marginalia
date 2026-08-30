@@ -459,6 +459,68 @@
   .note__delete:hover { color: rgba(42,36,16,0.85); }
   .note__delete:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
 
+  .note__handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    background: none;
+    border: none;
+    cursor: grab;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    font-size: 0.85rem;
+    line-height: 1;
+    color: rgba(42,36,16,0.35);
+    padding: 0;
+    user-select: none;
+    transition: color .15s ease;
+  }
+  .note__handle:hover { color: rgba(42,36,16,0.7); }
+  .note__handle:active { cursor: grabbing; }
+  .note__handle:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
+
+  .note.dragging {
+    box-shadow: 0 12px 26px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
+    z-index: 5;
+  }
+
+  .note__meta {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: rgba(42,36,16,0.42);
+    margin-top: 0.3rem;
+    user-select: none;
+  }
+
+  .sort-bar {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.6rem 1.1rem 0;
+    flex-shrink: 0;
+  }
+
+  .sort-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   .sr-only {
     position: absolute;
     width: 1px; height: 1px;
@@ -583,12 +645,17 @@
     </div>
     <button class="add-btn" id="addNote" type="button" aria-label="New note">+</button>
   </div>
+  <div class="sort-bar">
+    <button class="sort-btn" id="sortNewest" type="button">Newest</button>
+    <button class="sort-btn" id="sortOldest" type="button">Oldest</button>
+  </div>
   <div class="drawer__body" id="notesList"></div>
 </aside>
 
 <script>
 (function () {
   var STORAGE_KEY = 'marginalia:notes';
+  var DRAWER_KEY = 'marginalia:drawerOpen';
   var COLORS = ['#FFE58A', '#FFC1CF', '#B9F3C6', '#BFE1FF', '#FFD9A8', '#E3D1FF'];
 
   var dockTab = document.getElementById('dockTab');
@@ -599,6 +666,8 @@
   var noteCount = document.getElementById('noteCount');
   var syncStatus = document.getElementById('syncStatus');
   var syncStatusLabel = document.getElementById('syncStatusLabel');
+  var sortNewestBtn = document.getElementById('sortNewest');
+  var sortOldestBtn = document.getElementById('sortOldest');
 
   // ---- Storage: localStorage is always the source of truth for this
   // tab/browser. Everything below it is optional and swappable. ----
@@ -726,6 +795,7 @@
   });
 
   var notes = loadInitial();
+  notes.forEach(function (n) { if (!n.createdAt) n.createdAt = Date.now(); });
 
   function randomRot() {
     var deg = (Math.random() * 5) - 2.5;
@@ -739,6 +809,90 @@
   function autoGrow(ta) {
     ta.style.height = 'auto';
     ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  function fmtRelative(ts) {
+    if (!ts) return '';
+    var diff = Date.now() - ts;
+    var sec = Math.floor(diff / 1000);
+    if (sec < 60) return 'just now';
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + 'm ago';
+    var hr = Math.floor(min / 60);
+    if (hr < 24) return hr + 'h ago';
+    var day = Math.floor(hr / 24);
+    if (day < 7) return day + 'd ago';
+    return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function sortNotes(direction) {
+    notes.sort(function (a, b) {
+      var ad = a.createdAt || 0, bd = b.createdAt || 0;
+      return direction === 'newest' ? bd - ad : ad - bd;
+    });
+    persist(notes);
+    render();
+  }
+
+  // ---- Drag-to-reorder (pointer events cover mouse + touch/iOS alike) ----
+  var dragState = null;
+
+  function swapArray(i, j) {
+    var tmp = notes[i];
+    notes[i] = notes[j];
+    notes[j] = tmp;
+  }
+
+  function initDrag(handle, card, note) {
+    handle.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      dragState = { id: note.id, card: card, startY: e.clientY };
+      card.classList.add('dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+
+    handle.addEventListener('pointermove', function (e) {
+      if (!dragState || dragState.id !== note.id) return;
+      e.preventDefault();
+      var dy = e.clientY - dragState.startY;
+      card.style.transform = 'translateY(' + dy + 'px)';
+
+      var siblings = Array.prototype.slice.call(notesList.children);
+      var idx = siblings.indexOf(card);
+      var pointerY = e.clientY;
+
+      if (idx > 0) {
+        var prevRect = siblings[idx - 1].getBoundingClientRect();
+        if (pointerY < prevRect.top + prevRect.height / 2) {
+          swapArray(idx, idx - 1);
+          notesList.insertBefore(card, siblings[idx - 1]);
+          dragState.startY = e.clientY;
+          card.style.transform = '';
+          return;
+        }
+      }
+      if (idx < siblings.length - 1) {
+        var nextRect = siblings[idx + 1].getBoundingClientRect();
+        if (pointerY > nextRect.top + nextRect.height / 2) {
+          swapArray(idx, idx + 1);
+          notesList.insertBefore(siblings[idx + 1], card);
+          dragState.startY = e.clientY;
+          card.style.transform = '';
+          return;
+        }
+      }
+    });
+
+    function endDrag(e) {
+      if (!dragState || dragState.id !== note.id) return;
+      card.style.transform = '';
+      card.classList.remove('dragging');
+      try { handle.releasePointerCapture(e.pointerId); } catch (err) {}
+      dragState = null;
+      persist(notes);
+    }
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
   }
 
   function render() {
@@ -759,6 +913,12 @@
       card.style.setProperty('--note-color', note.color);
       card.style.setProperty('--rot', note.rot);
       card.style.setProperty('--i', i);
+
+      var handle = document.createElement('button');
+      handle.type = 'button';
+      handle.className = 'note__handle';
+      handle.setAttribute('aria-label', 'Drag to reorder');
+      handle.textContent = '⠿';
 
       var del = document.createElement('button');
       del.type = 'button';
@@ -784,10 +944,17 @@
         persist(notes);
       });
 
+      var meta = document.createElement('div');
+      meta.className = 'note__meta';
+      meta.textContent = fmtRelative(note.createdAt);
+
+      card.appendChild(handle);
       card.appendChild(del);
       card.appendChild(ta);
+      card.appendChild(meta);
       notesList.appendChild(card);
       autoGrow(ta);
+      initDrag(handle, card, note);
     });
   }
 
@@ -797,6 +964,7 @@
     backdrop.classList.add('show');
     drawer.setAttribute('aria-hidden', 'false');
     dockTab.setAttribute('aria-expanded', 'true');
+    try { localStorage.setItem(DRAWER_KEY, 'true'); } catch (e) {}
   }
 
   function closeDrawer() {
@@ -806,6 +974,7 @@
     backdrop.classList.remove('show');
     drawer.setAttribute('aria-hidden', 'true');
     dockTab.setAttribute('aria-expanded', 'false');
+    try { localStorage.setItem(DRAWER_KEY, 'false'); } catch (e) {}
   }
 
   function toggleDrawer() {
@@ -825,7 +994,8 @@
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       text: '',
       color: randomColor(),
-      rot: randomRot()
+      rot: randomRot(),
+      createdAt: Date.now()
     };
     notes.unshift(note);
     // Save locally right away, but don't trigger a network publish yet —
@@ -841,7 +1011,17 @@
     });
   });
 
+  sortNewestBtn.addEventListener('click', function () { sortNotes('newest'); });
+  sortOldestBtn.addEventListener('click', function () { sortNotes('oldest'); });
+
   render();
+  // A sync (persist -> syncAdapter.push) may reload this view, depending on
+  // the adapter. If the drawer was open right before that happened, reopen
+  // it here so syncing mid-drag (or mid-edit) doesn't visibly kick the
+  // viewer back out to the main screen.
+  try {
+    if (localStorage.getItem(DRAWER_KEY) === 'true') openDrawer();
+  } catch (e) {}
 })();
 
 (function () {
