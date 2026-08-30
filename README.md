@@ -18,8 +18,9 @@ only to your own browser (`localStorage`); nothing leaves your device.
   one.
 - **Book picks** — three random suggestions from a small, hand-picked shelf;
   tap "Shuffle" for a new set.
-- **Sticky notes** — a slide-out drawer of notes you can add, edit, and
-  delete, saved only in your own browser.
+- **Sticky notes** — a slide-out drawer of notes you can add, edit, delete,
+  and drag to reorder, saved only in your own browser. Each note carries a
+  date, with Newest/Oldest buttons to sort the list.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
 
