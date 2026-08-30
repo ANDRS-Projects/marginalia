@@ -519,7 +519,7 @@
 })();
 </script>
 
-<script id="notes-data" type="application/json">[{"id":"1788082412342-t3y2h","text":"Testing refresh","color":"#FFE58A","rot":"0.51deg"},{"id":"1788082133324-1ji31","text":"","color":"#BFE1FF","rot":"-1.88deg"},{"id":"1788076275505-36sjv","text":"Yes it works","color":"#FFD9A8","rot":"-1.70deg"},{"id":"1788076179106-nmzxu","text":"Test the sync","color":"#FFC1CF","rot":"2.49deg"}]</script>
+<script id="notes-data" type="application/json">[]</script>
 
 <div class="install-banner" id="installBanner">
   <span id="installBannerText"></span>
@@ -589,18 +589,8 @@
   var syncStatus = document.getElementById('syncStatus');
   var syncStatusLabel = document.getElementById('syncStatusLabel');
 
-  // ---- Cross-device sync (artifact capability), with local storage as
-  // both the fallback and the always-on same-device safety net. ----
-  var artifactApi = null;
-  var rawTemplate = null;
-  var rawTemplatePromise = null;
-  var needsSeed = false;
-
-  function setSyncStatus(synced) {
-    syncStatus.dataset.synced = synced ? 'true' : 'false';
-    syncStatusLabel.textContent = synced ? 'Synced across devices' : 'This device only';
-  }
-
+  // ---- Storage: localStorage is always the source of truth for this
+  // tab/browser. Everything below it is optional and swappable. ----
   function loadLocal() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -610,6 +600,95 @@
 
   function saveLocal(notes) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); } catch (e) {}
+  }
+
+  // ---- Sync adapter -----------------------------------------------
+  // A pluggable remote-sync point, not a finished feature. The contract
+  // any replacement adapter needs to satisfy:
+  //   .init(onReady)   — called once at load. Do whatever setup/auth your
+  //                       backend needs, then call onReady() if and only
+  //                       if you're able to sync. Never call it otherwise.
+  //   .push(notes)     — called after every local edit, passed the full
+  //                       current notes array. Persist it to your backend
+  //                       however makes sense there. Best-effort/fire-and
+  //                       forget is fine — saveLocal() below has already
+  //                       run first, so a user's notes are never at risk
+  //                       even if this fails.
+  //   .active          — boolean flag your init()/push() keep current, so
+  //                       the drawer's status pill can reflect it.
+  //
+  // Want to sync through Notion, your own API, a Gist, Firebase, whatever?
+  // Replace the object below with your own implementation of that same
+  // three-member shape and the rest of the app needs no changes.
+  //
+  // The default implementation activates ONLY when this page happens to
+  // be running inside Claude's Artifact hosting platform (i.e. `window
+  // .claude` exists there) — everywhere else, including GitHub Pages or a
+  // locally opened file, `init()` simply never calls `onReady`, and the
+  // app runs on localStorage alone.
+  var syncAdapter = (function () {
+    var artifactApi = null;
+    var rawTemplate = null;
+    var rawTemplatePromise = null;
+
+    function ensureTemplate() {
+      if (rawTemplate) return Promise.resolve(rawTemplate);
+      if (!rawTemplatePromise) {
+        rawTemplatePromise = fetch(window.location.href, { cache: 'no-store' })
+          .then(function (r) { return r.text(); })
+          .then(function (text) { rawTemplate = text; return text; })
+          .catch(function () { return null; });
+      }
+      return rawTemplatePromise;
+    }
+
+    function buildDocument(notes, template) {
+      if (!template) return null;
+      var json = JSON.stringify(notes).replace(/</g, '\\u003c');
+      var re = /(<script id="notes-data" type="application\/json">)[\s\S]*?(<\/script>)/;
+      if (!re.test(template)) return null;
+      return template.replace(re, function (_, open, close) { return open + json + close; });
+    }
+
+    var adapter = { active: false };
+
+    adapter.init = function (onReady) {
+      if (typeof window.claude === 'undefined' || !window.claude.use) return;
+      window.claude.use('artifact').then(function (api) {
+        if (!api) return;
+        artifactApi = api;
+        adapter.active = true;
+        onReady();
+      }, function () {});
+    };
+
+    adapter.push = function (notes) {
+      if (!artifactApi) return;
+      ensureTemplate().then(function (template) {
+        var html = buildDocument(notes, template);
+        if (!html) return;
+        artifactApi.publish(html).then(function () {
+          // Success: the shell reloads this view to the new version.
+        }, function (err) {
+          if (!err || (err.code !== 'conflict' && err.code !== 'rate_limited')) {
+            // Anything else (not_writer, not_granted, not_declared, ...):
+            // stop trying to sync for the rest of this session.
+            artifactApi = null;
+            adapter.active = false;
+            setSyncStatus(false);
+          }
+        });
+      });
+    };
+
+    return adapter;
+  })();
+
+  var needsSeed = false;
+
+  function setSyncStatus(synced) {
+    syncStatus.dataset.synced = synced ? 'true' : 'false';
+    syncStatusLabel.textContent = synced ? 'Synced across devices' : 'This device only';
   }
 
   function loadInitial() {
@@ -625,53 +704,15 @@
     return local;
   }
 
-  function ensureTemplate() {
-    if (rawTemplate) return Promise.resolve(rawTemplate);
-    if (!rawTemplatePromise) {
-      rawTemplatePromise = fetch(window.location.href, { cache: 'no-store' })
-        .then(function (r) { return r.text(); })
-        .then(function (text) { rawTemplate = text; return text; })
-        .catch(function () { return null; });
-    }
-    return rawTemplatePromise;
-  }
-
-  function buildDocument(notes, template) {
-    if (!template) return null;
-    var json = JSON.stringify(notes).replace(/</g, '\\u003c');
-    var re = /(<script id="notes-data" type="application\/json">)[\s\S]*?(<\/script>)/;
-    if (!re.test(template)) return null;
-    return template.replace(re, function (_, open, close) { return open + json + close; });
-  }
-
   function persist(notes) {
     saveLocal(notes);
-    if (!artifactApi) return;
-    ensureTemplate().then(function (template) {
-      var html = buildDocument(notes, template);
-      if (!html) return;
-      artifactApi.publish(html).then(function () {
-        // Success: the shell reloads this view to the new version.
-      }, function (err) {
-        if (!err || (err.code !== 'conflict' && err.code !== 'rate_limited')) {
-          // Anything else (not_writer, not_granted, not_declared, ...):
-          // stop trying to sync for the rest of this session.
-          artifactApi = null;
-          setSyncStatus(false);
-        }
-      });
-    });
+    syncAdapter.push(notes);
   }
 
-  (function initSync() {
-    if (typeof window.claude === 'undefined' || !window.claude.use) return;
-    window.claude.use('artifact').then(function (api) {
-      if (!api) return;
-      artifactApi = api;
-      setSyncStatus(true);
-      if (needsSeed) persist(notes);
-    }, function () {});
-  })();
+  syncAdapter.init(function () {
+    setSyncStatus(true);
+    if (needsSeed) persist(notes);
+  });
 
   var notes = loadInitial();
 
