@@ -23,6 +23,9 @@ only to your own browser (`localStorage`); nothing leaves your device.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
 
+<img width="1600" height="900" alt="IMG_4471" src="https://github.com/user-attachments/assets/bd88b6d0-0822-4d6e-80aa-ce7d3df0ba3a" />
+
+
 ## Quick Start
 
 ```bash
