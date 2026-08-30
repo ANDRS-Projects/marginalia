@@ -60,14 +60,14 @@ This is the whole point of this release, so to be explicit:
 - Clearing your browser data (or using a different browser/device) means a
   fresh, empty set of notes. That's expected, not a bug.
 
-*Aside, not a feature most visitors need to think about:* the page also
-contains a `window.claude.use('artifact')` capability-detection hook. It
-activates automatic cross-device sync **only** when the page happens to be
-running inside Claude's Artifact hosting platform, and is a no-op everywhere
-else — including on GitHub Pages or a locally opened file. It's left in as an
-optional integration point in case others want to adapt it to wire up their
-own sync backend; it has no effect on the default, privacy-first,
-browser-only storage model described above.
+*Aside, not a feature most visitors need to think about:* the code has a
+`syncAdapter` object (see [CLAUDE.md](CLAUDE.md)) as a documented swap-in
+point for developers who want cross-device sync — Notion, your own API,
+whatever. The shipped default only activates automatic sync when this page
+happens to be running inside Claude's Artifact hosting platform, and is a
+no-op everywhere else, including on GitHub Pages or a locally opened file.
+It has no effect on the default, privacy-first, browser-only storage model
+described above unless you deliberately replace it.
 
 ## Development
 

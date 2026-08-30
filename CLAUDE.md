@@ -62,13 +62,25 @@ and no data shared between visitors or devices by default. A dismissal flag
 for the install banner (`marginalia:installBannerDismissed`) is stored the
 same way.
 
-**Optional sync hook:** the notes script calls
-`window.claude.use('artifact')` if that API exists. This activates
-cross-device sync *only* when the page happens to be running inside Claude's
+**Sync adapter (swap point, not a finished feature):** the `syncAdapter`
+object in the notes script (search `index.html` for `syncAdapter`) is the
+one place remote sync lives. Any replacement needs the same three-member
+shape:
+- `.init(onReady)` — run once at load; call `onReady()` only if your
+  backend is actually reachable.
+- `.push(notes)` — called after every local edit with the full notes
+  array; persist it however your backend wants. `saveLocal()` has already
+  run first, so a user's notes are never at risk even if this fails.
+- `.active` — boolean your `init`/`push` keep current, read by the
+  drawer's status pill.
+
+The shipped implementation calls `window.claude.use('artifact')` and
+activates *only* when the page happens to be running inside Claude's
 Artifact hosting platform; everywhere else (GitHub Pages, a local file, any
-other browser) the check fails silently and the app falls back to
-`localStorage` only. Treat it as an optional integration point — adapt or
-remove it if you want to wire up your own sync backend instead.
+other browser) `init()` never calls `onReady`, and the app runs on
+`localStorage` alone. Replace the `syncAdapter` object with your own
+Notion/Firebase/custom-API implementation of the same shape to wire up a
+different backend — nothing else in the file needs to change.
 
 ## Configuration
 
