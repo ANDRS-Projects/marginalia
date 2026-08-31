@@ -195,6 +195,8 @@
 
   .quote.fade, .quote-attribution.fade { opacity: 0; }
 
+  .quote-actions { display: flex; gap: 0.5rem; }
+
   @media (prefers-reduced-motion: reduce) {
     .quote, .quote-attribution { transition: none; }
   }
@@ -253,6 +255,7 @@
 
   .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
   .ghost-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ghost-btn:disabled { cursor: default; opacity: 0.6; }
 
   /* ---- Dock tab ---- */
   /* ---- Dock tabs ----
@@ -702,7 +705,10 @@
       <p class="eyebrow">Something to sit with</p>
       <blockquote class="quote" id="quoteText"></blockquote>
       <p class="quote-attribution" id="quoteAttribution"></p>
-      <button class="ghost-btn" id="nextQuote" type="button">Another</button>
+      <div class="quote-actions">
+        <button class="ghost-btn" id="nextQuote" type="button">Another</button>
+        <button class="ghost-btn" id="keepQuote" type="button">Keep</button>
+      </div>
     </div>
 
     <div class="panel" aria-label="Book suggestions">
@@ -1232,6 +1238,23 @@
     });
   }
 
+  // Lets the separate quotes script (a different <script> IIFE below) tuck
+  // arbitrary text straight into Keepsakes — for "Keep" on the quote
+  // rotator — without going through Notes at all. A small, deliberately
+  // narrow bridge between the two closures rather than merging them.
+  window.marginaliaKeepText = function (text) {
+    keepsakes.unshift({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      text: text,
+      color: randomColor(),
+      rot: randomRot(),
+      createdAt: Date.now(),
+      keptAt: Date.now()
+    });
+    persistKeepsakes(keepsakes);
+    renderKeepsakes();
+  };
+
   // ---- Margin tabs — one at a time, so the edge stays quiet. Each tab is a
   // { dockTab, drawer, pull } tuple; opening one closes any other. pull()
   // (re-check the server) only runs on an explicit user tap of the dock
@@ -1406,6 +1429,7 @@
   var quoteText = document.getElementById('quoteText');
   var quoteAttribution = document.getElementById('quoteAttribution');
   var nextQuoteBtn = document.getElementById('nextQuote');
+  var keepQuoteBtn = document.getElementById('keepQuote');
   var quoteIndex = Math.floor(Math.random() * QUOTES.length);
   var quoteTimer = null;
 
@@ -1438,6 +1462,21 @@
   nextQuoteBtn.addEventListener('click', function () {
     showQuote(true);
     resetQuoteTimer();
+  });
+
+  var keepQuoteResetTimer = null;
+  keepQuoteBtn.addEventListener('click', function () {
+    var q = QUOTES[quoteIndex];
+    if (typeof window.marginaliaKeepText === 'function') {
+      window.marginaliaKeepText('“' + q.text + '” — ' + q.author);
+    }
+    keepQuoteBtn.textContent = 'Kept';
+    keepQuoteBtn.disabled = true;
+    clearTimeout(keepQuoteResetTimer);
+    keepQuoteResetTimer = setTimeout(function () {
+      keepQuoteBtn.textContent = 'Keep';
+      keepQuoteBtn.disabled = false;
+    }, 1400);
   });
 
   // ---- Books ----

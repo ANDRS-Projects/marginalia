@@ -16,14 +16,14 @@ device unless you opt into the optional sync feature below.
 - **Breathing circle** — a slow, four-phase breathing prompt (Breathe in /
   Hold / Breathe out / Hold) to sit with for a moment before anything else.
 - **A quote to sit with** — rotates on its own, or tap "Another" for the next
-  one.
+  one. Tap "Keep" to tuck the current quote straight into Keepsakes.
 - **Book picks** — three random suggestions from a small, hand-picked shelf;
   tap "Shuffle" for a new set.
 - **Sticky notes** — a slide-out drawer of notes you can add, edit, delete,
   and drag to reorder, saved only in your own browser. Each note carries a
   date, with Newest/Oldest buttons to sort the list.
-- **Keepsakes** — a second margin tab next to Notes. Tap the ❧ on any note to
-  move it out of your working notes and into Keepsakes: sealed, read-only,
+- **Keepsakes** — a second margin tab next to Notes. Tap the ❧ on any note (or
+  "Keep" on a quote) to move it into Keepsakes: sealed, read-only,
   chronological, stamped with the date you kept it. For things worth not
   losing, as opposed to things to do. Tap ↩ on a keepsake to move it back
   into Notes if it needs an update.
