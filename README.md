@@ -22,9 +22,13 @@ device unless you opt into the optional sync feature below.
 - **Sticky notes** — a slide-out drawer of notes you can add, edit, delete,
   and drag to reorder, saved only in your own browser. Each note carries a
   date, with Newest/Oldest buttons to sort the list.
+- **Keepsakes** — a second margin tab next to Notes. Tap the ❧ on any note to
+  move it out of your working notes and into Keepsakes: sealed, read-only,
+  chronological, stamped with the date you kept it. For things worth not
+  losing, as opposed to things to do.
 - **Optional cross-device sync** — deploy your own Cloudflare Worker (see
   [worker/](worker/)) and paste its URL/key into the sync settings panel to
-  sync notes across devices. Off by default; see
+  sync both notes and keepsakes across devices. Off by default; see
   [Storage & Privacy](#storage--privacy) below.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
@@ -67,28 +71,30 @@ of embedded `data:` URI images (the app icon). You can:
 
 By default, this is the whole point of the release, so to be explicit:
 
-- Notes are stored **only** in your own browser, via `localStorage`. There is
-  no account, no sign-in, and no backend server involved.
+- Notes and keepsakes are each stored **only** in your own browser, via
+  `localStorage`. There is no account, no sign-in, and no backend server
+  involved.
 - Nothing is sent anywhere, and nothing is shared between visitors — your
   notes on your laptop are invisible to anyone else, including on the exact
   same hosted URL.
 - Clearing your browser data (or using a different browser/device) means a
-  fresh, empty set of notes. That's expected, not a bug.
+  fresh, empty set of notes and keepsakes. That's expected, not a bug.
 
 **This stays true unless you deliberately opt into the optional sync
-feature.** The app ships with a `syncAdapter` object (see
-[CLAUDE.md](CLAUDE.md)) — a documented swap-in point for cross-device sync —
-and its default implementation is a real, working one: a small Cloudflare
-Worker backed by Cloudflare KV (see [worker/](worker/)). It is **inert by
-default**: nothing is sent anywhere until you deploy your own copy of the
-Worker (`worker/README.md` walks through it) and paste its URL and API key
-into the sync settings panel (gear icon next to the status pill in the notes
-drawer). Once configured, your notes leave your device and are stored in
-*your own* Cloudflare account, under *your own* Worker — never anyone else's,
-and never anything you didn't explicitly set up yourself. Want to sync
-through Notion, your own API, or something else instead? Replace the
-`syncAdapter` object with your own implementation of the same three-member
-shape; nothing else in the file needs to change.
+feature.** The app ships with a `createListSync()` factory (see
+[CLAUDE.md](CLAUDE.md)) — a documented swap-in point for cross-device sync,
+instantiated once for notes and once for keepsakes — and its default
+implementation is a real, working one: a small Cloudflare Worker backed by
+two Cloudflare KV keys (see [worker/](worker/)). It is **inert by default**:
+nothing is sent anywhere until you deploy your own copy of the Worker
+(`worker/README.md` walks through it) and paste its URL and API key into the
+sync settings panel (gear icon next to the status pill in the notes drawer)
+— the same credentials cover both resources. Once configured, your notes and
+keepsakes leave your device and are stored in *your own* Cloudflare account,
+under *your own* Worker — never anyone else's, and never anything you didn't
+explicitly set up yourself. Want to sync through Notion, your own API, or
+something else instead? Replace `createListSync()`'s implementation with your
+own version of the same shape; nothing else in the file needs to change.
 
 ## Development
 
