@@ -3,7 +3,7 @@
 **Version:** n/a (single-file app) | **Stack:** plain HTML/CSS/JS, zero dependencies | **Runtime:** any modern browser
 
 ## What
-A quiet corner before the busy work — a breathing circle, a thoughtful quote, book picks, and sticky notes tucked at the edge of the screen. Notes save only to your own browser (`localStorage`); nothing leaves your device.
+A quiet corner before the busy work — a breathing circle, a thoughtful quote, book picks, and sticky notes tucked at the edge of the screen. A second margin tab, Keepsakes, holds notes you've deliberately kept: sealed, read-only, chronological. Everything saves only to your own browser (`localStorage`); nothing leaves your device.
 
 ## Quick Start
 
@@ -34,8 +34,13 @@ index.html   # everything: HTML structure, <style> CSS, and three <script> block
 
 One file, three inline `<script>` blocks, each an IIFE with its own concern:
 
-1. **Sticky notes** — renders/edits/deletes notes, persists them, and (optionally,
-   once configured) syncs across devices via a pluggable `syncAdapter`.
+1. **Sticky notes + Keepsakes** — renders/edits/deletes notes, persists them,
+   and (optionally, once configured) syncs across devices via a pluggable
+   `createListSync()`. Also owns the Keepsakes drawer — a second margin tab
+   for notes moved out of Notes via the ❧ action: sealed, read-only,
+   chronological. Both drawers are driven by a generalized `tabs[]`
+   controller (search `index.html` for "Margin tabs") so a third tab is a
+   small, additive change, not a rewrite.
 2. **Breathing circle + quotes + books** — a 4-phase breathing animation, a
    quote rotator (20s interval + "Another" button), and a random 3-of-11 book
    picker ("Shuffle" button). Purely presentational, no persistence.
@@ -56,34 +61,39 @@ setup.sh      opens or serves index.html locally — no dependencies to install
 
 ## Storage & Privacy Model
 
-Sticky notes are stored **only** in the visitor's own browser via
-`localStorage` (key: `marginalia:notes`) unless the optional sync feature
-below is configured. There is no account, no backend, and no data shared
-between visitors or devices by default. A dismissal flag for the install
-banner (`marginalia:installBannerDismissed`) is stored the same way.
+Notes and keepsakes are each stored **only** in the visitor's own browser via
+`localStorage` (keys: `marginalia:notes`, `marginalia:keepsakes`) unless the
+optional sync feature below is configured. There is no account, no backend,
+and no data shared between visitors or devices by default. A dismissal flag
+for the install banner (`marginalia:installBannerDismissed`) is stored the
+same way.
 
-**Sync adapter:** the `syncAdapter` object in the notes script (search
-`index.html` for `syncAdapter`) is the one place remote sync lives. Any
-replacement needs the same three-member shape:
-- `.init(onReady)` — run once at load; call `onReady(remoteNotes)` only if
-  your backend is actually reachable — `remoteNotes` is whatever it
-  currently holds (an array, possibly empty). Never call it otherwise.
-- `.push(notes)` — called after every local edit with the full notes
-  array; persist it however your backend wants. `saveLocal()` has already
-  run first, so a user's notes are never at risk even if this fails.
-- `.active` — boolean your `init`/`push` keep current, read by the
-  drawer's status pill.
+**Sync adapter:** `createListSync(path, statusEl, statusLabelEl)` in the
+notes script (search `index.html` for `createListSync`) is the one place
+remote sync lives — instantiated once per resource (`syncAdapter` for
+`/notes`, `keepsakeSyncAdapter` for `/keepsakes`), both reading the same
+shared credentials via `getSyncConfig()`. Any replacement backend needs the
+same per-instance shape:
+- `.init(onReady)` — run once at load (and again whenever that resource's
+  dock tab is opened); call `onReady(remoteItems)` only if your backend is
+  actually reachable — `remoteItems` is whatever it currently holds (an
+  array, possibly empty). Never call it otherwise.
+- `.push(items)` — called after every local edit with the full array for
+  that resource; persist it however your backend wants. The local save has
+  already run first, so a user's data is never at risk even if this fails.
+- `.active` — boolean your `init`/`push` keep current, read by that
+  resource's status pill.
 
 The shipped default implementation talks to a small Cloudflare Worker
-backed by a single Cloudflare KV key holding the full notes array — see
-`worker/` and `worker/README.md` to deploy your own copy. It reads a Worker
-URL and API key from `localStorage` (keys: `marginalia:syncUrl`,
-`marginalia:syncApiKey`), set via the sync settings panel (gear icon next
-to the status pill in the drawer). Unconfigured, `init()` never calls
-`onReady` and the app runs on `localStorage` alone. Replace the
-`syncAdapter` object with your own Notion/Firebase/custom-API
-implementation of the same shape to wire up a different backend — nothing
-else in the file needs to change.
+backed by two Cloudflare KV keys — one per resource — see `worker/` and
+`worker/README.md` to deploy your own copy. It reads a Worker URL and API
+key from `localStorage` (keys: `marginalia:syncUrl`, `marginalia:syncApiKey`),
+set via the sync settings panel (gear icon next to the status pill in the
+Notes drawer) — the same credentials cover both `/notes` and `/keepsakes`.
+Unconfigured, `init()` never calls `onReady` and the app runs on
+`localStorage` alone. Replace `createListSync()`'s implementation with your
+own Notion/Firebase/custom-API version of the same shape to wire up a
+different backend — nothing else in the file needs to change.
 
 ## Configuration
 

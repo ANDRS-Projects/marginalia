@@ -2,8 +2,6 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
 
-const NOTES_KEY = 'marginalia:notes';
-
 const app = new Hono<{ Bindings: Env }>();
 
 // ── Auth ──────────────────────────────────────────────────────────────────
@@ -16,6 +14,7 @@ const app = new Hono<{ Bindings: Env }>();
 // brittle here anyway (a Claude Artifact's serving origin can vary between
 // versions of the same artifact).
 app.use('/notes', cors());
+app.use('/keepsakes', cors());
 app.use('/notes', async (c, next) => {
   const key = c.req.header('X-API-Key');
   if (!key || key !== c.env.API_KEY) {
@@ -23,30 +22,46 @@ app.use('/notes', async (c, next) => {
   }
   await next();
 });
-
-// ── GET /notes — return the current notes array ─────────────────────────────
-app.get('/notes', async (c) => {
-  const raw = await c.env.NOTES.get(NOTES_KEY);
-  const notes = raw ? JSON.parse(raw) : [];
-  return c.json(notes);
+app.use('/keepsakes', async (c, next) => {
+  const key = c.req.header('X-API-Key');
+  if (!key || key !== c.env.API_KEY) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  await next();
 });
 
-// ── POST /notes — overwrite the notes array ──────────────────────────────────
-// No per-note diffing, no reconciliation: the incoming array is the full,
-// authoritative list (array order == note order, so drag-reordering just
-// works). Whichever device pushes last wins, atomically, for the whole list.
-app.post('/notes', async (c) => {
-  let notes: unknown;
-  try {
-    notes = await c.req.json();
-  } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
-  }
-  if (!Array.isArray(notes)) {
-    return c.json({ error: 'Expected a JSON array of notes' }, 400);
-  }
-  await c.env.NOTES.put(NOTES_KEY, JSON.stringify(notes));
-  return c.json({ ok: true });
-});
+// ── /notes and /keepsakes — same shape, two separate KV keys ────────────────
+// Keepsakes are notes a person has deliberately kept, so they get their own
+// list (and their own KV key) rather than a flag on a note — that mirrors
+// how the client treats them as a separate, sealed collection, not a filter
+// over the same one. Both routes share this one GET/POST implementation:
+// no per-item diffing, no reconciliation — the incoming array is always the
+// full, authoritative list (array order == item order, so drag-reordering
+// just works). Whichever device pushes last wins, atomically, for the whole
+// list.
+function mountListRoute(path: string, kvKey: string) {
+  app.get(path, async (c) => {
+    const raw = await c.env.NOTES.get(kvKey);
+    const items = raw ? JSON.parse(raw) : [];
+    return c.json(items);
+  });
+
+  app.post(path, async (c) => {
+    let items: unknown;
+    try {
+      items = await c.req.json();
+    } catch {
+      return c.json({ error: 'Invalid JSON body' }, 400);
+    }
+    if (!Array.isArray(items)) {
+      return c.json({ error: 'Expected a JSON array' }, 400);
+    }
+    await c.env.NOTES.put(kvKey, JSON.stringify(items));
+    return c.json({ ok: true });
+  });
+}
+
+mountListRoute('/notes', 'marginalia:notes');
+mountListRoute('/keepsakes', 'marginalia:keepsakes');
 
 export default app;

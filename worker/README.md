@@ -1,20 +1,26 @@
 # Marginalia sync Worker
 
 A tiny Cloudflare Worker that gives Marginalia real cross-device sync: your
-notes live in one Cloudflare KV key instead of only in each browser's
-`localStorage`. This is the reference implementation of the `syncAdapter`
-swap point described in the main [CLAUDE.md](../CLAUDE.md) — deploy your own
-copy and nothing else in `index.html` needs to change beyond pasting in your
-Worker's URL and key.
+notes and keepsakes each live in their own Cloudflare KV key instead of only
+in each browser's `localStorage`. This is the reference implementation of the
+`createListSync()` swap point described in the main
+[CLAUDE.md](../CLAUDE.md) — deploy your own copy and nothing else in
+`index.html` needs to change beyond pasting in your Worker's URL and key.
 
-Two endpoints, both requiring an `X-API-Key` header:
+Four endpoints — `/notes` and `/keepsakes`, each with the same GET/POST
+shape, all requiring an `X-API-Key` header:
 
 - `GET /notes` — returns the current notes array (`[]` if nothing synced yet)
 - `POST /notes` — overwrites it with the array in the request body
+- `GET /keepsakes` — same, for the kept-notes list
+- `POST /keepsakes` — same, for the kept-notes list
 
-No accounts, no per-note diffing — the incoming array is always the full,
+No accounts, no per-item diffing — the incoming array is always the full,
 authoritative list, so drag-reordering just works (array order *is* note
 order). Whichever device pushes last wins, atomically, for the whole list.
+Both resources share the same `X-API-Key` and the same `NOTES` KV namespace
+(just different keys within it) — there's nothing extra to provision for
+keepsakes.
 
 ## Setup
 
@@ -25,7 +31,7 @@ Requires a free Cloudflare account and the `wrangler` CLI
 cd worker
 npm install
 
-# Create the KV namespace that will hold your notes
+# Create the KV namespace that will hold your notes and keepsakes
 wrangler kv namespace create NOTES
 ```
 
