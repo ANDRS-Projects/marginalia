@@ -16,6 +16,17 @@ No accounts, no per-note diffing — the incoming array is always the full,
 authoritative list, so drag-reordering just works (array order *is* note
 order). Whichever device pushes last wins, atomically, for the whole list.
 
+`/notes` also carries a Cloudflare rate limit (30 requests/minute per IP) —
+a free, harmless extra layer, but not a real security boundary: Cloudflare's
+own docs describe this binding as "eventually consistent" and enforced
+per-isolate rather than with one global counter, and testing this
+confirmed it doesn't reliably trip even under a fast burst. The actual
+defense against brute-forcing `API_KEY` is its length — a 256-bit random
+string (`openssl rand -hex 32`, per the setup steps above) makes guessing
+infeasible regardless. Nothing to set up for the rate limit itself; the
+`namespace_id` in `wrangler.toml`'s `[[ratelimits]]` block is just an
+arbitrary number, not something you provision.
+
 ## Setup
 
 Requires a free Cloudflare account and the `wrangler` CLI
