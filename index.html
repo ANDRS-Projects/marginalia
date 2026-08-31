@@ -404,6 +404,17 @@
   }
   .sync-settings input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+  .sync-settings__hint {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .sync-settings__hint a { color: var(--accent); }
+  .sync-settings__hint a:hover { color: var(--accent-strong); }
+  .sync-settings__hint a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
   .sync-settings__actions {
     display: flex;
     justify-content: flex-end;
@@ -684,6 +695,7 @@
     <button class="add-btn" id="addNote" type="button" aria-label="New note">+</button>
   </div>
   <div class="sync-settings" id="syncSettings">
+    <p class="sync-settings__hint">Don't have one? <a href="https://github.com/ANDRS-Projects/marginalia/tree/main/worker" target="_blank" rel="noopener">Deploy your own Worker</a> — a few minutes, free.</p>
     <label class="sr-only" for="syncUrlInput">Sync Worker URL</label>
     <input type="url" id="syncUrlInput" placeholder="Sync Worker URL" autocomplete="off">
     <label class="sr-only" for="syncKeyInput">Sync API key</label>
