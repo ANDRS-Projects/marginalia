@@ -34,8 +34,8 @@ index.html   # everything: HTML structure, <style> CSS, and three <script> block
 
 One file, three inline `<script>` blocks, each an IIFE with its own concern:
 
-1. **Sticky notes** — renders/edits/deletes notes, persists them, and (optionally)
-   syncs across devices when running inside Claude's Artifact platform.
+1. **Sticky notes** — renders/edits/deletes notes, persists them, and (optionally,
+   once configured) syncs across devices via a pluggable `syncAdapter`.
 2. **Breathing circle + quotes + books** — a 4-phase breathing animation, a
    quote rotator (20s interval + "Another" button), and a random 3-of-11 book
    picker ("Shuffle" button). Purely presentational, no persistence.
@@ -57,30 +57,33 @@ setup.sh      opens or serves index.html locally — no dependencies to install
 ## Storage & Privacy Model
 
 Sticky notes are stored **only** in the visitor's own browser via
-`localStorage` (key: `marginalia:notes`). There is no account, no backend,
-and no data shared between visitors or devices by default. A dismissal flag
-for the install banner (`marginalia:installBannerDismissed`) is stored the
-same way.
+`localStorage` (key: `marginalia:notes`) unless the optional sync feature
+below is configured. There is no account, no backend, and no data shared
+between visitors or devices by default. A dismissal flag for the install
+banner (`marginalia:installBannerDismissed`) is stored the same way.
 
-**Sync adapter (swap point, not a finished feature):** the `syncAdapter`
-object in the notes script (search `index.html` for `syncAdapter`) is the
-one place remote sync lives. Any replacement needs the same three-member
-shape:
-- `.init(onReady)` — run once at load; call `onReady()` only if your
-  backend is actually reachable.
+**Sync adapter:** the `syncAdapter` object in the notes script (search
+`index.html` for `syncAdapter`) is the one place remote sync lives. Any
+replacement needs the same three-member shape:
+- `.init(onReady)` — run once at load; call `onReady(remoteNotes)` only if
+  your backend is actually reachable — `remoteNotes` is whatever it
+  currently holds (an array, possibly empty). Never call it otherwise.
 - `.push(notes)` — called after every local edit with the full notes
   array; persist it however your backend wants. `saveLocal()` has already
   run first, so a user's notes are never at risk even if this fails.
 - `.active` — boolean your `init`/`push` keep current, read by the
   drawer's status pill.
 
-The shipped implementation calls `window.claude.use('artifact')` and
-activates *only* when the page happens to be running inside Claude's
-Artifact hosting platform; everywhere else (GitHub Pages, a local file, any
-other browser) `init()` never calls `onReady`, and the app runs on
-`localStorage` alone. Replace the `syncAdapter` object with your own
-Notion/Firebase/custom-API implementation of the same shape to wire up a
-different backend — nothing else in the file needs to change.
+The shipped default implementation talks to a small Cloudflare Worker
+backed by a single Cloudflare KV key holding the full notes array — see
+`worker/` and `worker/README.md` to deploy your own copy. It reads a Worker
+URL and API key from `localStorage` (keys: `marginalia:syncUrl`,
+`marginalia:syncApiKey`), set via the sync settings panel (gear icon next
+to the status pill in the drawer). Unconfigured, `init()` never calls
+`onReady` and the app runs on `localStorage` alone. Replace the
+`syncAdapter` object with your own Notion/Firebase/custom-API
+implementation of the same shape to wire up a different backend — nothing
+else in the file needs to change.
 
 ## Configuration
 
