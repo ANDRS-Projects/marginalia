@@ -1062,8 +1062,17 @@
   }
 
   function toggleDrawer() {
-    if (drawer.classList.contains('open')) closeDrawer();
-    else openDrawer();
+    if (drawer.classList.contains('open')) {
+      closeDrawer();
+    } else {
+      openDrawer();
+      // Pushes already happen on every edit (see persist()), but nothing
+      // re-pulls after the initial page load — a long-lived tab or an
+      // installed iOS Home Screen app can sit open for days and never see
+      // changes made elsewhere. Re-check the server each time the drawer is
+      // opened, since that's the moment the user is about to look at notes.
+      syncAdapter.init(onSyncReady);
+    }
   }
 
   dockTab.addEventListener('click', toggleDrawer);
