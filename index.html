@@ -417,6 +417,7 @@
 
   .sync-settings__actions {
     display: flex;
+    gap: 0.5rem;
     justify-content: flex-end;
   }
 
@@ -701,6 +702,7 @@
     <label class="sr-only" for="syncKeyInput">Sync API key</label>
     <input type="password" id="syncKeyInput" placeholder="API key" autocomplete="off">
     <div class="sync-settings__actions">
+      <button class="sort-btn" id="syncClearBtn" type="button">Clear</button>
       <button class="sort-btn" id="syncSaveBtn" type="button">Save</button>
     </div>
   </div>
@@ -732,6 +734,7 @@
   var syncUrlInput = document.getElementById('syncUrlInput');
   var syncKeyInput = document.getElementById('syncKeyInput');
   var syncSaveBtn = document.getElementById('syncSaveBtn');
+  var syncClearBtn = document.getElementById('syncClearBtn');
 
   // ---- Storage: localStorage is always the source of truth for this
   // tab/browser. Everything below it is optional and swappable. ----
@@ -840,6 +843,15 @@
         localStorage.setItem(SYNC_URL_KEY, url);
         localStorage.setItem(SYNC_API_KEY_KEY, key);
       } catch (e) {}
+    };
+
+    adapter.clear = function () {
+      try {
+        localStorage.removeItem(SYNC_URL_KEY);
+        localStorage.removeItem(SYNC_API_KEY_KEY);
+      } catch (e) {}
+      adapter.active = false;
+      setSyncStatus(false);
     };
 
     adapter.getConfig = getConfig;
@@ -1105,6 +1117,13 @@
     syncAdapter.configure(url, key);
     syncSettings.classList.remove('show');
     syncAdapter.init(onSyncReady);
+  });
+
+  syncClearBtn.addEventListener('click', function () {
+    syncAdapter.clear();
+    syncUrlInput.value = '';
+    syncKeyInput.value = '';
+    syncSettings.classList.remove('show');
   });
 
   render();
