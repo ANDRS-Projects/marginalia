@@ -25,7 +25,8 @@ device unless you opt into the optional sync feature below.
 - **Keepsakes** — a second margin tab next to Notes. Tap the ❧ on any note to
   move it out of your working notes and into Keepsakes: sealed, read-only,
   chronological, stamped with the date you kept it. For things worth not
-  losing, as opposed to things to do.
+  losing, as opposed to things to do. Tap ↩ on a keepsake to move it back
+  into Notes if it needs an update.
 - **Optional cross-device sync** — deploy your own Cloudflare Worker (see
   [worker/](worker/)) and paste its URL/key into the sync settings panel to
   sync both notes and keepsakes across devices. Off by default; see

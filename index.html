@@ -515,7 +515,7 @@
     gap: 0.05rem;
   }
 
-  .note__keep, .note__delete {
+  .note__keep, .note__delete, .note__restore {
     background: none;
     border: none;
     cursor: pointer;
@@ -525,8 +525,12 @@
     padding: 0.2rem 0.4rem;
     transition: color .15s ease;
   }
-  .note__keep:hover, .note__delete:hover { color: rgba(42,36,16,0.85); }
-  .note__keep:focus-visible, .note__delete:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
+  .note__keep:hover, .note__delete:hover, .note__restore:hover { color: rgba(42,36,16,0.85); }
+  .note__keep:focus-visible, .note__delete:focus-visible, .note__restore:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
+
+  /* ❧ and ↩ are finer, lower-contrast glyphs than × — size and darken them
+     so they actually read at a glance instead of looking like a stray mark. */
+  .note__keep, .note__restore { font-size: 1.15rem; color: rgba(42,36,16,0.55); }
 
   .note__handle {
     position: absolute;
@@ -1078,6 +1082,18 @@
     renderKeepsakes();
   }
 
+  // The reverse of keepNote() — for a keepsake that needs an update, back
+  // into the working, editable Notes list at the top.
+  function restoreKeepsake(keepsake) {
+    keepsakes = keepsakes.filter(function (k) { return k.id !== keepsake.id; });
+    persistKeepsakes(keepsakes);
+    delete keepsake.keptAt;
+    notes.unshift(keepsake);
+    persist(notes);
+    render();
+    renderKeepsakes();
+  }
+
   function render() {
     notesList.innerHTML = '';
     noteCount.textContent = notes.length;
@@ -1176,6 +1192,17 @@
       card.style.setProperty('--rot', keepsake.rot);
       card.style.setProperty('--i', i);
 
+      var actions = document.createElement('div');
+      actions.className = 'note__actions';
+
+      var restore = document.createElement('button');
+      restore.type = 'button';
+      restore.className = 'note__restore';
+      restore.setAttribute('aria-label', 'Move back to Notes');
+      restore.title = 'Move back to Notes';
+      restore.textContent = '↩';
+      restore.addEventListener('click', function () { restoreKeepsake(keepsake); });
+
       var del = document.createElement('button');
       del.type = 'button';
       del.className = 'note__delete';
@@ -1187,6 +1214,9 @@
         renderKeepsakes();
       });
 
+      actions.appendChild(restore);
+      actions.appendChild(del);
+
       var text = document.createElement('p');
       text.className = 'note__text';
       text.textContent = keepsake.text;
@@ -1195,7 +1225,7 @@
       meta.className = 'note__meta';
       meta.textContent = 'Kept ' + fmtKeptDate(keepsake.keptAt);
 
-      card.appendChild(del);
+      card.appendChild(actions);
       card.appendChild(text);
       card.appendChild(meta);
       keepsakesList.appendChild(card);
