@@ -8,7 +8,8 @@
 
 A quiet corner before the busy work — a breathing circle, a thoughtful quote,
 book picks, and sticky notes tucked at the edge of the screen. Notes save
-only to your own browser (`localStorage`); nothing leaves your device.
+only to your own browser (`localStorage`) by default; nothing leaves your
+device unless you opt into the optional sync feature below.
 
 ## Features
 
@@ -21,6 +22,10 @@ only to your own browser (`localStorage`); nothing leaves your device.
 - **Sticky notes** — a slide-out drawer of notes you can add, edit, delete,
   and drag to reorder, saved only in your own browser. Each note carries a
   date, with Newest/Oldest buttons to sort the list.
+- **Optional cross-device sync** — deploy your own Cloudflare Worker (see
+  [worker/](worker/)) and paste its URL/key into the sync settings panel to
+  sync notes across devices. Off by default; see
+  [Storage & Privacy](#storage--privacy) below.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
 
@@ -60,7 +65,7 @@ of embedded `data:` URI images (the app icon). You can:
 
 ## Storage & Privacy
 
-This is the whole point of this release, so to be explicit:
+By default, this is the whole point of the release, so to be explicit:
 
 - Notes are stored **only** in your own browser, via `localStorage`. There is
   no account, no sign-in, and no backend server involved.
@@ -70,14 +75,20 @@ This is the whole point of this release, so to be explicit:
 - Clearing your browser data (or using a different browser/device) means a
   fresh, empty set of notes. That's expected, not a bug.
 
-*Aside, not a feature most visitors need to think about:* the code has a
-`syncAdapter` object (see [CLAUDE.md](CLAUDE.md)) as a documented swap-in
-point for developers who want cross-device sync — Notion, your own API,
-whatever. The shipped default only activates automatic sync when this page
-happens to be running inside Claude's Artifact hosting platform, and is a
-no-op everywhere else, including on GitHub Pages or a locally opened file.
-It has no effect on the default, privacy-first, browser-only storage model
-described above unless you deliberately replace it.
+**This stays true unless you deliberately opt into the optional sync
+feature.** The app ships with a `syncAdapter` object (see
+[CLAUDE.md](CLAUDE.md)) — a documented swap-in point for cross-device sync —
+and its default implementation is a real, working one: a small Cloudflare
+Worker backed by Cloudflare KV (see [worker/](worker/)). It is **inert by
+default**: nothing is sent anywhere until you deploy your own copy of the
+Worker (`worker/README.md` walks through it) and paste its URL and API key
+into the sync settings panel (gear icon next to the status pill in the notes
+drawer). Once configured, your notes leave your device and are stored in
+*your own* Cloudflare account, under *your own* Worker — never anyone else's,
+and never anything you didn't explicitly set up yourself. Want to sync
+through Notion, your own API, or something else instead? Replace the
+`syncAdapter` object with your own implementation of the same three-member
+shape; nothing else in the file needs to change.
 
 ## Development
 
