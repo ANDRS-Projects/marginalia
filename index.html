@@ -273,7 +273,16 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
+    /* This wrapper's own box is invisible (no background) but was still a
+       real, always-present hit target hugging the screen's right edge —
+       silently eating clicks on any drawer content that came within its
+       ~46px width and its vertical span (e.g. the AI settings Save button,
+       once its taller panel pushed it low enough to fall in that range).
+       Let clicks pass through the empty wrapper; only the tabs themselves
+       should catch them. */
+    pointer-events: none;
   }
+  .dock-tab { pointer-events: auto; }
 
   .dock-tab {
     position: relative;
@@ -399,6 +408,23 @@
   .sync-settings-btn:hover { color: var(--accent); }
   .sync-settings-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  .thought-settings-btn {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    cursor: pointer;
+    margin-left: 0.3rem;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .thought-settings-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .thought-settings-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   .sync-settings {
     display: none;
     flex-direction: column;
@@ -430,6 +456,14 @@
   .sync-settings__hint a { color: var(--accent); }
   .sync-settings__hint a:hover { color: var(--accent-strong); }
   .sync-settings__hint a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .thought-settings__hint {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin: 0;
+  }
 
   .sync-settings__actions {
     display: flex;
@@ -574,6 +608,49 @@
     user-select: none;
   }
 
+  /* ---- Reflect (bring-your-own-model, per-note) ---- */
+  .reflect {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .reflect__btn {
+    background: none;
+    border: 1px solid rgba(42,36,16,0.25);
+    color: rgba(42,36,16,0.55);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .reflect__btn:hover { border-color: rgba(42,36,16,0.5); color: rgba(42,36,16,0.85); }
+  .reflect__btn:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
+
+  .reflect__status {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: rgba(42,36,16,0.5);
+    margin: 0;
+  }
+  .reflect__status--error { color: rgba(140,40,20,0.75); }
+
+  .reflect__text {
+    margin: 0;
+    padding: 0.5rem 0.6rem;
+    background: rgba(255,255,255,0.35);
+    border-radius: 3px;
+    width: 100%;
+  }
+
+  .reflect__actions { display: flex; gap: 0.4rem; }
+
   .note__text {
     margin: 0;
     font-family: var(--font-note);
@@ -607,6 +684,14 @@
   }
   .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
   .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Save/Clear in the sync + AI settings panels are tapped far less often
+     than Newest/Oldest, but each miss is more annoying (re-typing a key) —
+     give them a noticeably bigger hit area than the default .sort-btn. */
+  .sync-settings__actions .sort-btn {
+    padding: 0.6rem 1rem;
+    min-height: 2.75rem;
+  }
 
   .sr-only {
     position: absolute;
@@ -736,7 +821,7 @@
   <div class="drawer__header">
     <div class="drawer__heading">
       <h2 class="drawer__title">Marginalia</h2>
-      <p class="sync-status" id="syncStatus" data-synced="false"><span class="sync-status__dot"></span><span id="syncStatusLabel">This device only</span><button class="sync-settings-btn" id="syncSettingsBtn" type="button" aria-label="Sync settings">⚙</button></p>
+      <p class="sync-status" id="syncStatus" data-synced="false"><span class="sync-status__dot"></span><span id="syncStatusLabel">This device only</span><button class="sync-settings-btn" id="syncSettingsBtn" type="button" aria-label="Sync settings">⚙</button><button class="thought-settings-btn" id="thoughtSettingsBtn" type="button" aria-label="AI reflection settings" title="AI reflection settings">AI</button></p>
     </div>
     <button class="add-btn" id="addNote" type="button" aria-label="New note">+</button>
   </div>
@@ -749,6 +834,21 @@
     <div class="sync-settings__actions">
       <button class="sort-btn" id="syncClearBtn" type="button">Clear</button>
       <button class="sort-btn" id="syncSaveBtn" type="button">Save</button>
+    </div>
+  </div>
+  <div class="sync-settings" id="thoughtSettings">
+    <p class="thought-settings__hint">Bring your own model for the Reflect action on notes. Uses your own API key — this may incur real costs on your account. Nothing here is sent anywhere except when you tap Reflect.</p>
+    <label class="sr-only" for="thoughtUrlInput">Model API URL</label>
+    <input type="url" id="thoughtUrlInput" placeholder="API URL (e.g. https://api.anthropic.com/v1/messages)" autocomplete="off">
+    <label class="sr-only" for="thoughtKeyInput">Model API key</label>
+    <input type="password" id="thoughtKeyInput" placeholder="API key" autocomplete="off">
+    <label class="sr-only" for="thoughtModelInput">Model name</label>
+    <input type="text" id="thoughtModelInput" placeholder="Model (e.g. claude-haiku-4-5-20251001)" autocomplete="off">
+    <label class="sr-only" for="thoughtWorkspaceInput">Workspace ID (optional)</label>
+    <input type="text" id="thoughtWorkspaceInput" placeholder="Workspace ID — only if your key asks for one (wrkspc_…)" autocomplete="off">
+    <div class="sync-settings__actions">
+      <button class="sort-btn" id="thoughtClearBtn" type="button">Clear</button>
+      <button class="sort-btn" id="thoughtSaveBtn" type="button">Save</button>
     </div>
   </div>
   <div class="sort-bar">
@@ -797,6 +897,14 @@
   var syncKeyInput = document.getElementById('syncKeyInput');
   var syncSaveBtn = document.getElementById('syncSaveBtn');
   var syncClearBtn = document.getElementById('syncClearBtn');
+  var thoughtSettingsBtn = document.getElementById('thoughtSettingsBtn');
+  var thoughtSettings = document.getElementById('thoughtSettings');
+  var thoughtUrlInput = document.getElementById('thoughtUrlInput');
+  var thoughtKeyInput = document.getElementById('thoughtKeyInput');
+  var thoughtModelInput = document.getElementById('thoughtModelInput');
+  var thoughtWorkspaceInput = document.getElementById('thoughtWorkspaceInput');
+  var thoughtSaveBtn = document.getElementById('thoughtSaveBtn');
+  var thoughtClearBtn = document.getElementById('thoughtClearBtn');
 
   // ---- Storage: localStorage is always the source of truth for this
   // tab/browser, for both notes and keepsakes. Everything below it is
@@ -1171,10 +1279,86 @@
       card.appendChild(actions);
       card.appendChild(ta);
       card.appendChild(meta);
+      card.appendChild(buildReflectBlock(note));
       notesList.appendChild(card);
       autoGrow(ta);
       initDrag(handle, card, note);
     });
+  }
+
+  // Renders whatever reflections[note.id] currently holds: an idle
+  // "Reflect" prompt, a loading state, an error (with retry), or the
+  // generated text with its own Keep/Dismiss — mirrors keepNote()'s
+  // move-not-copy semantics: Keep here calls addKeepsake() directly
+  // (the reflection was never a note), Dismiss just clears the draft.
+  function buildReflectBlock(note) {
+    var wrap = document.createElement('div');
+    wrap.className = 'reflect';
+    var state = reflections[note.id];
+
+    if (!state) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'reflect__btn';
+      btn.textContent = 'Reflect';
+      btn.addEventListener('click', function () { reflectOnNote(note); });
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
+    if (state.status === 'loading') {
+      var loading = document.createElement('p');
+      loading.className = 'reflect__status';
+      loading.textContent = 'Reflecting…';
+      wrap.appendChild(loading);
+      return wrap;
+    }
+
+    if (state.status === 'error') {
+      var err = document.createElement('p');
+      err.className = 'reflect__status reflect__status--error';
+      err.textContent = state.error;
+      wrap.appendChild(err);
+      var retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'reflect__btn';
+      retry.textContent = 'Try again';
+      retry.addEventListener('click', function () { reflectOnNote(note); });
+      wrap.appendChild(retry);
+      return wrap;
+    }
+
+    var text = document.createElement('p');
+    text.className = 'note__text reflect__text';
+    text.textContent = state.text;
+    wrap.appendChild(text);
+
+    var reflectActions = document.createElement('div');
+    reflectActions.className = 'reflect__actions';
+
+    var keepBtn = document.createElement('button');
+    keepBtn.type = 'button';
+    keepBtn.className = 'reflect__btn';
+    keepBtn.textContent = 'Keep';
+    keepBtn.addEventListener('click', function () {
+      addKeepsake(state.text);
+      delete reflections[note.id];
+      render();
+    });
+
+    var dismissBtn = document.createElement('button');
+    dismissBtn.type = 'button';
+    dismissBtn.className = 'reflect__btn';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.addEventListener('click', function () {
+      delete reflections[note.id];
+      render();
+    });
+
+    reflectActions.appendChild(keepBtn);
+    reflectActions.appendChild(dismissBtn);
+    wrap.appendChild(reflectActions);
+    return wrap;
   }
 
   // Keepsakes are sealed: no handle (no reordering — chronological only),
@@ -1238,11 +1422,13 @@
     });
   }
 
-  // Lets the separate quotes script (a different <script> IIFE below) tuck
-  // arbitrary text straight into Keepsakes — for "Keep" on the quote
-  // rotator — without going through Notes at all. A small, deliberately
+  // Tucks arbitrary text straight into Keepsakes as a new, sealed entry —
+  // without it ever having been a working note. Used by the Reflect action
+  // below (a generated reflection you choose to keep) and exposed on
+  // window for the separate quotes script (a different <script> IIFE
+  // below) to reuse for "Keep" on the quote rotator — a small, deliberately
   // narrow bridge between the two closures rather than merging them.
-  window.marginaliaKeepText = function (text) {
+  function addKeepsake(text) {
     keepsakes.unshift({
       id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       text: text,
@@ -1253,7 +1439,114 @@
     });
     persistKeepsakes(keepsakes);
     renderKeepsakes();
-  };
+  }
+  window.marginaliaKeepText = addKeepsake;
+
+  // ---- Reflect (bring your own model) --------------------------------
+  // A one-shot prompt -> short text completion, not a chat thread: no
+  // message history is kept or sent, and nothing calls out automatically —
+  // only an explicit tap of "Reflect" on a note ever makes a network call.
+  // Config is separate from (and reuses none of) the sync credentials
+  // above; it's the user's own third-party API key, with real billing
+  // implications, so it gets its own settings panel and its own explicit
+  // opt-in. The default request shape here matches Anthropic's Messages
+  // API (see thoughtSettings' hint text) — swap it to call a different
+  // provider and nothing else in this function needs to change.
+  var THOUGHT_URL_KEY = 'marginalia:thoughtUrl';
+  var THOUGHT_API_KEY_KEY = 'marginalia:thoughtApiKey';
+  var THOUGHT_MODEL_KEY = 'marginalia:thoughtModel';
+  var THOUGHT_WORKSPACE_KEY = 'marginalia:thoughtWorkspaceId';
+
+  function getThoughtConfig() {
+    var url, key, model, workspaceId;
+    try {
+      url = localStorage.getItem(THOUGHT_URL_KEY);
+      key = localStorage.getItem(THOUGHT_API_KEY_KEY);
+      model = localStorage.getItem(THOUGHT_MODEL_KEY);
+      workspaceId = localStorage.getItem(THOUGHT_WORKSPACE_KEY);
+    } catch (e) {}
+    return (url && key && model) ? { url: url, key: key, model: model, workspaceId: workspaceId || '' } : null;
+  }
+
+  function saveThoughtConfig(url, key, model, workspaceId) {
+    try {
+      localStorage.setItem(THOUGHT_URL_KEY, url);
+      localStorage.setItem(THOUGHT_API_KEY_KEY, key);
+      localStorage.setItem(THOUGHT_MODEL_KEY, model);
+      // Optional — only some Anthropic API keys (multi-workspace personal
+      // or service-account keys) require this; leaving it blank is normal
+      // for a workspace-scoped or classic key.
+      if (workspaceId) localStorage.setItem(THOUGHT_WORKSPACE_KEY, workspaceId);
+      else localStorage.removeItem(THOUGHT_WORKSPACE_KEY);
+    } catch (e) {}
+  }
+
+  function clearThoughtConfig() {
+    try {
+      localStorage.removeItem(THOUGHT_URL_KEY);
+      localStorage.removeItem(THOUGHT_API_KEY_KEY);
+      localStorage.removeItem(THOUGHT_MODEL_KEY);
+      localStorage.removeItem(THOUGHT_WORKSPACE_KEY);
+    } catch (e) {}
+  }
+
+  function askThought(prompt) {
+    var cfg = getThoughtConfig();
+    if (!cfg) return Promise.reject(new Error('Set up your model in AI settings first.'));
+    var headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': cfg.key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+    if (cfg.workspaceId) headers['anthropic-workspace-id'] = cfg.workspaceId;
+    return fetch(cfg.url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        model: cfg.model,
+        max_tokens: 200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    }).then(function (r) {
+      if (!r.ok) {
+        return r.text().then(function (body) {
+          throw new Error('Request failed (' + r.status + '): ' + body.slice(0, 200));
+        });
+      }
+      return r.json();
+    }).then(function (data) {
+      var text = data && data.content && data.content[0] && data.content[0].text;
+      if (!text) throw new Error('No response text found in the reply.');
+      return text.trim();
+    });
+  }
+
+  // reflections[note.id] tracks the in-progress/completed reflection for
+  // that note as transient UI state only — never persisted, never synced.
+  // A reflection only becomes real, saved data once its own Keep action
+  // (see render()) moves it into Keepsakes as its own sealed entry.
+  var reflections = {};
+
+  function reflectOnNote(note) {
+    if (!getThoughtConfig()) {
+      reflections[note.id] = { status: 'error', error: 'Set up your model in AI settings first (the "AI" button above).' };
+      render();
+      return;
+    }
+    reflections[note.id] = { status: 'loading' };
+    render();
+    askThought(
+      'Give me one short reflective question or small mental exercise related ' +
+      'to this note. One or two sentences, no preamble.\n\nNote: ' + note.text
+    ).then(function (text) {
+      reflections[note.id] = { status: 'done', text: text };
+      render();
+    }).catch(function (err) {
+      reflections[note.id] = { status: 'error', error: err && err.message ? err.message : String(err) };
+      render();
+    });
+  }
 
   // ---- Margin tabs — one at a time, so the edge stays quiet. Each tab is a
   // { dockTab, drawer, pull } tuple; opening one closes any other. pull()
@@ -1376,6 +1669,39 @@
     syncUrlInput.value = '';
     syncKeyInput.value = '';
     syncSettings.classList.remove('show');
+  });
+
+  (function prefillThoughtSettings() {
+    var cfg = getThoughtConfig();
+    if (cfg) {
+      thoughtUrlInput.value = cfg.url;
+      thoughtKeyInput.value = cfg.key;
+      thoughtModelInput.value = cfg.model;
+      thoughtWorkspaceInput.value = cfg.workspaceId;
+    }
+  })();
+
+  thoughtSettingsBtn.addEventListener('click', function () {
+    thoughtSettings.classList.toggle('show');
+  });
+
+  thoughtSaveBtn.addEventListener('click', function () {
+    var url = thoughtUrlInput.value.trim();
+    var key = thoughtKeyInput.value.trim();
+    var model = thoughtModelInput.value.trim();
+    var workspaceId = thoughtWorkspaceInput.value.trim();
+    if (!url || !key || !model) return;
+    saveThoughtConfig(url, key, model, workspaceId);
+    thoughtSettings.classList.remove('show');
+  });
+
+  thoughtClearBtn.addEventListener('click', function () {
+    clearThoughtConfig();
+    thoughtUrlInput.value = '';
+    thoughtKeyInput.value = '';
+    thoughtModelInput.value = '';
+    thoughtWorkspaceInput.value = '';
+    thoughtSettings.classList.remove('show');
   });
 
   render();
