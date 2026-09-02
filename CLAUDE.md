@@ -129,6 +129,20 @@ slice of your content goes out with every tap of "Another" there, not just
 one note's text — see the Storage & Privacy note in the README before
 changing what this sends.
 
+**Background picker.** `.plates` (search `index.html` for "Illustrated
+background") holds one `<img>` per plate — birds (owl + sparrowhawk) and a
+botanical — and shows only the active set via a `data-bg` attribute on the
+container, driven by CSS (`.plates[data-bg="…"] …`), not by adding/removing
+DOM nodes. The "BG" button next to the sync gear opens a small panel (three
+buttons, `aria-pressed` marks the current one); picking one calls
+`chooseBackground()`, which applies immediately and persists to
+`localStorage` (`marginalia:background`) — no Save step, since it's a
+cosmetic preference rather than a credential. Adding a fourth plate is:
+another `<img class="plates__yourname">` in the markup, a CSS rule sizing
+and positioning it plus a `.plates[data-bg="yourname"] .plates__yourname {
+display: block; }` rule, and a fourth button in `#bgSettings` wired the
+same way as the existing three.
+
 ## Configuration
 
 None. There are no environment variables, no `.env` file, and no build-time

@@ -72,8 +72,11 @@
     overflow-x: hidden;
   }
 
-  /* Illustrated background — engraved plates (Bewick, British Birds 1797),
-     paper keyed out to alpha. Decorative only; sits under all content. */
+  /* Illustrated background — a choice of engraved plates, paper keyed out
+     to alpha. Decorative only; sits under all content. Which set shows is
+     controlled by data-bg on .plates (see the background picker in the
+     notes drawer header, and marginalia:background in localStorage) — the
+     default, "birds", is unchanged from before this option existed. */
   .plates {
     position: fixed;
     inset: 0;
@@ -85,9 +88,31 @@
   .plates img {
     position: absolute;
     opacity: 0.18;
+    display: none;
   }
+  .plates[data-bg="birds"] .plates__owl,
+  .plates[data-bg="birds"] .plates__hawk {
+    display: block;
+  }
+  .plates[data-bg="botanical"] .plates__botanical {
+    display: block;
+  }
+
   .plates__owl { top: -40px; right: -18px; width: 280px; }
   .plates__hawk { bottom: -18px; left: -58px; width: 320px; }
+
+  /* Botanical plate — centred, cropped by the page edge like a plate
+     sitting half off the trim in a bound book. Tuned at opacity 0.16
+     rather than the birds' 0.18 (see marginalia-background-handoff.md).
+     Height is a shade under the original 880px tuning so the top edge
+     doesn't hard-crop at the viewport edge on shorter windows. */
+  .plates .plates__botanical {
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 820px;
+    opacity: 0.16;
+  }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .plates img { filter: invert(1); }
@@ -97,6 +122,7 @@
   @media (max-width: 640px) {
     .plates__owl { width: 190px; top: -26px; right: -12px; }
     .plates__hawk { width: 216px; bottom: -12px; left: -42px; }
+    .plates .plates__botanical { height: 620px; bottom: -20px; }
   }
 
   .canvas {
@@ -722,6 +748,12 @@
     min-height: 2.75rem;
   }
 
+  .sync-settings__actions .sort-btn[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
   .sr-only {
     position: absolute;
     width: 1px; height: 1px;
@@ -799,9 +831,10 @@
   <button class="install-banner__dismiss" id="installBannerDismiss" type="button" aria-label="Dismiss">×</button>
 </div>
 
-<div class="plates" aria-hidden="true">
+<div class="plates" aria-hidden="true" data-bg="birds">
   <img class="plates__owl" src="bewick-owl-ink.png" alt="">
   <img class="plates__hawk" src="bewick-sparrowhawk-ink.png" alt="">
+  <img class="plates__botanical" src="plate-gentolissima-ink.png" alt="">
 </div>
 
 <main class="canvas">
@@ -864,7 +897,7 @@
   <div class="drawer__header">
     <div class="drawer__heading">
       <h2 class="drawer__title">Marginalia</h2>
-      <p class="sync-status" id="syncStatus" data-synced="false"><span class="sync-status__dot"></span><span id="syncStatusLabel">This device only</span><button class="sync-settings-btn" id="syncSettingsBtn" type="button" aria-label="Sync settings">⚙</button><button class="thought-settings-btn" id="thoughtSettingsBtn" type="button" aria-label="AI reflection settings" title="AI reflection settings">AI</button></p>
+      <p class="sync-status" id="syncStatus" data-synced="false"><span class="sync-status__dot"></span><span id="syncStatusLabel">This device only</span><button class="sync-settings-btn" id="syncSettingsBtn" type="button" aria-label="Sync settings">⚙</button><button class="thought-settings-btn" id="thoughtSettingsBtn" type="button" aria-label="AI reflection settings" title="AI reflection settings">AI</button><button class="thought-settings-btn" id="bgSettingsBtn" type="button" aria-label="Background settings" title="Background">BG</button></p>
     </div>
     <button class="add-btn" id="addNote" type="button" aria-label="New note">+</button>
   </div>
@@ -892,6 +925,14 @@
     <div class="sync-settings__actions">
       <button class="sort-btn" id="thoughtClearBtn" type="button">Clear</button>
       <button class="sort-btn" id="thoughtSaveBtn" type="button">Save</button>
+    </div>
+  </div>
+  <div class="sync-settings" id="bgSettings">
+    <p class="thought-settings__hint">The faint illustration behind the page. Purely decorative — this choice stays on this device only.</p>
+    <div class="sync-settings__actions">
+      <button class="sort-btn" id="bgBirdsBtn" type="button" aria-pressed="true">Birds</button>
+      <button class="sort-btn" id="bgBotanicalBtn" type="button" aria-pressed="false">Botanical</button>
+      <button class="sort-btn" id="bgNoneBtn" type="button" aria-pressed="false">None</button>
     </div>
   </div>
   <div class="sort-bar">
@@ -948,6 +989,12 @@
   var thoughtWorkspaceInput = document.getElementById('thoughtWorkspaceInput');
   var thoughtSaveBtn = document.getElementById('thoughtSaveBtn');
   var thoughtClearBtn = document.getElementById('thoughtClearBtn');
+  var bgSettingsBtn = document.getElementById('bgSettingsBtn');
+  var bgSettings = document.getElementById('bgSettings');
+  var bgBirdsBtn = document.getElementById('bgBirdsBtn');
+  var bgBotanicalBtn = document.getElementById('bgBotanicalBtn');
+  var bgNoneBtn = document.getElementById('bgNoneBtn');
+  var platesEl = document.querySelector('.plates');
 
   // ---- Storage: localStorage is always the source of truth for this
   // tab/browser, for both notes and keepsakes. Everything below it is
@@ -1783,6 +1830,42 @@
     thoughtWorkspaceInput.value = '';
     thoughtSettings.classList.remove('show');
   });
+
+  // ---- Background picker ----
+  // Purely cosmetic (which engraved plate, if any, sits behind the page),
+  // so unlike sync/AI settings above there's no Save/Clear step — picking
+  // an option applies and persists it immediately.
+  var BACKGROUND_KEY = 'marginalia:background';
+  var BACKGROUND_BTNS = { birds: bgBirdsBtn, botanical: bgBotanicalBtn, none: bgNoneBtn };
+
+  function getBackgroundChoice() {
+    try {
+      var v = localStorage.getItem(BACKGROUND_KEY);
+      return (v === 'botanical' || v === 'none') ? v : 'birds';
+    } catch (e) { return 'birds'; }
+  }
+
+  function applyBackground(choice) {
+    if (platesEl) platesEl.dataset.bg = choice;
+    Object.keys(BACKGROUND_BTNS).forEach(function (key) {
+      BACKGROUND_BTNS[key].setAttribute('aria-pressed', key === choice ? 'true' : 'false');
+    });
+  }
+
+  function chooseBackground(choice) {
+    applyBackground(choice);
+    try { localStorage.setItem(BACKGROUND_KEY, choice); } catch (e) {}
+  }
+
+  applyBackground(getBackgroundChoice());
+
+  bgSettingsBtn.addEventListener('click', function () {
+    bgSettings.classList.toggle('show');
+  });
+
+  bgBirdsBtn.addEventListener('click', function () { chooseBackground('birds'); });
+  bgBotanicalBtn.addEventListener('click', function () { chooseBackground('botanical'); });
+  bgNoneBtn.addEventListener('click', function () { chooseBackground('none'); });
 
   render();
   renderKeepsakes();
