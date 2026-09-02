@@ -38,6 +38,12 @@ device unless you opt into the optional sync feature below.
   message history — and the result is only saved if you tap Keep. Off by
   default, and no note content ever leaves your device unless you
   explicitly tap Reflect on that note.
+- **"From your margins"** — a third panel under the book picks, same rhythm
+  as the quote panel (tap "Another" for a new one, "Keep" to save it), but
+  personal: the prompt is built from a sample of what's actually in your
+  Notes and Keepsakes, using the same bring-your-own-model setup as
+  Reflect. Tap-to-generate only — nothing is sent just from opening the
+  page.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
 
@@ -114,6 +120,15 @@ default, directly to Anthropic's API using your own key, which is a real,
 billable credential (unlike the sync feature's Worker key, a leaked Reflect
 key can cost you money on your own account, so treat it accordingly). No
 other note, keepsake, or app data is ever included in that request.
+
+**"From your margins" uses the same credentials as Reflect, but sends more.**
+Configuring the AI settings panel enables both features together — there's
+no separate toggle. Where Reflect sends only the one note you tapped, "From
+your margins" samples up to six recent notes and six keepsakes and includes
+all of it in the prompt, every time you tap "Another" on that panel. Still
+tap-to-generate only (nothing is sent just from having the page open), and
+still your own key/endpoint — just a wider slice of your own content going
+out with each request.
 
 ## Development
 

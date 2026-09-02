@@ -117,6 +117,18 @@ change. Unlike the sync key, this is the user's own billable third-party API
 key; the settings panel says so plainly, and no request happens without an
 explicit tap of "Reflect" on a specific note.
 
+**"From your margins" reuses `askThought()` but builds a different prompt.**
+`buildPersonalPrompt()` (search `index.html` for the same name) samples up
+to six recent notes and six keepsakes and folds their text into the prompt
+— genuinely personal, unlike Reflect's generic-until-you-pick-a-note
+framing. It's exposed as `window.marginaliaAskPersonalThought()`, the same
+kind of narrow cross-script bridge as `marginaliaKeepText`/`marginaliaAskThought`,
+since the panel that calls it lives in the separate quotes/breathing script.
+Same credentials as Reflect (one settings panel enables both), but a wider
+slice of your content goes out with every tap of "Another" there, not just
+one note's text — see the Storage & Privacy note in the README before
+changing what this sends.
+
 ## Configuration
 
 None. There are no environment variables, no `.env` file, and no build-time
