@@ -44,6 +44,10 @@ device unless you opt into the optional sync feature below.
   Notes and Keepsakes, using the same bring-your-own-model setup as
   Reflect. Tap-to-generate only — nothing is sent just from opening the
   page.
+- **Illustrated background, your choice** — a faint engraved plate sits
+  behind the page: the default is a pair of Bewick birds, or pick a
+  botanical plate instead (or turn it off) from the "BG" button next to the
+  sync gear. Purely decorative, and the choice stays on your device only.
 - **Installable** — works as a home-screen / dock app on iOS and macOS
   Safari (which have no native install prompt), via a small in-page banner.
 
