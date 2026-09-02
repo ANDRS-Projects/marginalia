@@ -801,6 +801,15 @@
       <ul class="book-list" id="bookList"></ul>
       <button class="ghost-btn" id="shuffleBooks" type="button">Shuffle</button>
     </div>
+
+    <div class="panel" aria-label="From your margins">
+      <p class="eyebrow">From your margins</p>
+      <blockquote class="quote" id="questionText">Tap "Another" for a thought drawn from what's actually in your notes and keepsakes.</blockquote>
+      <div class="quote-actions">
+        <button class="ghost-btn" id="anotherQuestion" type="button">Another</button>
+        <button class="ghost-btn" id="keepQuestion" type="button" disabled>Keep</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -837,7 +846,7 @@
     </div>
   </div>
   <div class="sync-settings" id="thoughtSettings">
-    <p class="thought-settings__hint">Bring your own model for the Reflect action on notes. Uses your own API key — this may incur real costs on your account. Nothing here is sent anywhere except when you tap Reflect.</p>
+    <p class="thought-settings__hint">Bring your own model — powers the Reflect action on notes (sends just that one note's text) and the "From your margins" panel (sends a sample of your notes and keepsakes each time you tap Another there). Uses your own API key — this may incur real costs on your account. Nothing here is sent anywhere unless you tap one of those two actions.</p>
     <label class="sr-only" for="thoughtUrlInput">Model API URL</label>
     <input type="url" id="thoughtUrlInput" placeholder="API URL (e.g. https://api.anthropic.com/v1/messages)" autocomplete="off">
     <label class="sr-only" for="thoughtKeyInput">Model API key</label>
@@ -1522,6 +1531,43 @@
     });
   }
 
+  // Exposed for the same reason as marginaliaKeepText above — the "From
+  // your margins" panel lives in the separate quotes/breathing script and
+  // needs this one function, not the rest of this closure.
+  window.marginaliaAskThought = askThought;
+
+  // "From your margins" is deliberately personal — unlike the generic
+  // askThought() above, this samples what's actually in Notes and
+  // Keepsakes (a handful of each, not the whole archive, to keep the
+  // prompt focused and the request small) and sends that content to
+  // whatever endpoint is configured. That's a real difference from
+  // Reflect, which only ever sends the one note you explicitly tapped —
+  // this one gathers a sample every time you tap "Another" here. Kept as
+  // its own function (not folded into askThought) precisely so that
+  // distinction stays visible in the code, not just in a comment.
+  function buildPersonalPrompt() {
+    var snippets = [];
+    notes.slice(0, 6).forEach(function (n) { if (n.text && n.text.trim()) snippets.push(n.text.trim()); });
+    keepsakes.slice(0, 6).forEach(function (k) { if (k.text && k.text.trim()) snippets.push(k.text.trim()); });
+    if (!snippets.length) {
+      return 'Give me one short, open-ended reflective question suitable for ' +
+        'a quiet pause before starting work — nothing is in Notes or ' +
+        'Keepsakes yet, so keep it general. One sentence, no preamble, no ' +
+        'quotation marks.';
+    }
+    return 'Here are some things from my notes and keepsakes, in no ' +
+      'particular order:\n\n' +
+      snippets.map(function (s) { return '- ' + s; }).join('\n') +
+      '\n\nBased on what\'s actually here, give me one short, personal ' +
+      'reflective question or thought — something that genuinely connects ' +
+      'to this, not a generic one. One or two sentences, no preamble, no ' +
+      'quotation marks.';
+  }
+
+  window.marginaliaAskPersonalThought = function () {
+    return askThought(buildPersonalPrompt());
+  };
+
   // reflections[note.id] tracks the in-progress/completed reflection for
   // that note as transient UI state only — never persisted, never synced.
   // A reflection only becomes real, saved data once its own Keep action
@@ -1802,6 +1848,53 @@
     keepQuoteResetTimer = setTimeout(function () {
       keepQuoteBtn.textContent = 'Keep';
       keepQuoteBtn.disabled = false;
+    }, 1400);
+  });
+
+  // ---- From your margins (bring your own model, personalized) -----------
+  // Same rhythm as the quote panel above (Another/Keep), but the prompt is
+  // built from a sample of what's actually in Notes and Keepsakes (see
+  // buildPersonalPrompt() in the notes script) instead of a static array.
+  // Tap-to-generate only — never fetched automatically, so opening
+  // Marginalia never silently spends your API credits or sends your notes
+  // anywhere on its own.
+  var questionText = document.getElementById('questionText');
+  var anotherQuestionBtn = document.getElementById('anotherQuestion');
+  var keepQuestionBtn = document.getElementById('keepQuestion');
+  var currentQuestion = null;
+
+  function generateQuestion() {
+    if (typeof window.marginaliaAskPersonalThought !== 'function') return;
+    anotherQuestionBtn.disabled = true;
+    keepQuestionBtn.disabled = true;
+    questionText.textContent = 'Thinking…';
+    window.marginaliaAskPersonalThought().then(function (text) {
+      currentQuestion = text;
+      questionText.textContent = text;
+      anotherQuestionBtn.disabled = false;
+      keepQuestionBtn.disabled = false;
+    }).catch(function (err) {
+      currentQuestion = null;
+      questionText.textContent = err && err.message ? err.message : String(err);
+      anotherQuestionBtn.disabled = false;
+      keepQuestionBtn.disabled = true;
+    });
+  }
+
+  anotherQuestionBtn.addEventListener('click', generateQuestion);
+
+  var keepQuestionResetTimer = null;
+  keepQuestionBtn.addEventListener('click', function () {
+    if (!currentQuestion) return;
+    if (typeof window.marginaliaKeepText === 'function') {
+      window.marginaliaKeepText(currentQuestion);
+    }
+    keepQuestionBtn.textContent = 'Kept';
+    keepQuestionBtn.disabled = true;
+    clearTimeout(keepQuestionResetTimer);
+    keepQuestionResetTimer = setTimeout(function () {
+      keepQuestionBtn.textContent = 'Keep';
+      keepQuestionBtn.disabled = false;
     }, 1400);
   });
 
