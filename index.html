@@ -72,11 +72,40 @@
     overflow-x: hidden;
   }
 
+  /* Illustrated background — engraved plates (Bewick, British Birds 1797),
+     paper keyed out to alpha. Decorative only; sits under all content. */
+  .plates {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+    overflow: hidden;
+  }
+  .plates img {
+    position: absolute;
+    opacity: 0.18;
+  }
+  .plates__owl { top: -40px; right: -18px; width: 280px; }
+  .plates__hawk { bottom: -18px; left: -58px; width: 320px; }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .plates img { filter: invert(1); }
+  }
+  :root[data-theme="dark"] .plates img { filter: invert(1); }
+
+  @media (max-width: 640px) {
+    .plates__owl { width: 190px; top: -26px; right: -12px; }
+    .plates__hawk { width: 216px; bottom: -12px; left: -42px; }
+  }
+
   .canvas {
     min-height: 100vh;
     display: flex;
     justify-content: center;
     padding: 4rem 1.5rem 5rem;
+    position: relative;
+    z-index: 1;
     color: var(--text);
     font-family: var(--font-body);
   }
@@ -768,6 +797,11 @@
 <div class="install-banner" id="installBanner">
   <span id="installBannerText"></span>
   <button class="install-banner__dismiss" id="installBannerDismiss" type="button" aria-label="Dismiss">×</button>
+</div>
+
+<div class="plates" aria-hidden="true">
+  <img class="plates__owl" src="bewick-owl-ink.png" alt="">
+  <img class="plates__hawk" src="bewick-sparrowhawk-ink.png" alt="">
 </div>
 
 <main class="canvas">
