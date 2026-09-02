@@ -77,7 +77,7 @@
   .plates {
     position: fixed;
     inset: 0;
-    z-index: 0;
+    z-index: -1;
     pointer-events: none;
     user-select: none;
     overflow: hidden;
@@ -104,8 +104,6 @@
     display: flex;
     justify-content: center;
     padding: 4rem 1.5rem 5rem;
-    position: relative;
-    z-index: 1;
     color: var(--text);
     font-family: var(--font-body);
   }
@@ -212,6 +210,7 @@
     margin: 0;
     text-wrap: balance;
     transition: opacity 0.35s ease;
+    will-change: opacity;
   }
 
   .quote-attribution {
@@ -220,6 +219,7 @@
     color: var(--text-muted);
     margin: 0;
     transition: opacity 0.35s ease;
+    will-change: opacity;
   }
 
   .quote.fade, .quote-attribution.fade { opacity: 0; }
@@ -1982,6 +1982,62 @@
 
   shuffleBtn.addEventListener('click', renderBooks);
   renderBooks();
+
+  // ---- Reserve quote height (prevent layout shift) ----
+  // Quotes vary from one line to three, so swapping between them used to
+  // change the panel's height and shove everything below it up or down.
+  // Measure the tallest quote off-screen (so the visible one never
+  // flickers) and lock both the quote panel and "From your margins" to
+  // that height, so rotating never reflows the page.
+  function measureMaxQuoteHeight() {
+    var probe = document.createElement('blockquote');
+    probe.className = 'quote';
+    probe.style.position = 'absolute';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style.left = '-9999px';
+    probe.style.top = '0';
+    probe.style.width = quoteText.getBoundingClientRect().width + 'px';
+    document.body.appendChild(probe);
+
+    var max = 0;
+    QUOTES.forEach(function (q) {
+      probe.textContent = '“' + q.text + '”';
+      max = Math.max(max, probe.offsetHeight);
+    });
+
+    document.body.removeChild(probe);
+    return max;
+  }
+
+  function reserveQuoteHeight() {
+    var height = measureMaxQuoteHeight();
+    if (!height) return;
+    quoteText.style.minHeight = height + 'px';
+    // "From your margins" is model-generated, so its length isn't bounded
+    // the way the static QUOTES array is — but reusing the same reserved
+    // height keeps the two panels visually consistent and covers the
+    // common case (a short reflective line or two) without extra work.
+    questionText.style.minHeight = height + 'px';
+  }
+
+  function scheduleReserveQuoteHeight() {
+    // Wait for the real font (not a fallback) to be in place first, or
+    // the measured wrap widths — and therefore heights — will be wrong.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(reserveQuoteHeight);
+    } else {
+      reserveQuoteHeight();
+    }
+  }
+
+  scheduleReserveQuoteHeight();
+
+  var reserveResizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(reserveResizeTimer);
+    reserveResizeTimer = setTimeout(reserveQuoteHeight, 200);
+  });
 })();
 (function () {
   // ---- Install banner (Safari has no native install prompt; this is a
