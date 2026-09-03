@@ -152,6 +152,16 @@ sizing and positioning it plus a `.plates[data-bg="yourname"]
 dark-mode exemption above), and a fourth button in `#bgSettings` wired the
 same way as the existing ones.
 
+**Copy button.** `copyToClipboard(text)` and `buildCopyBtn(getText)` (search
+`index.html` for "Copy to clipboard") are shared by both the notes and
+keepsakes renderers — `buildCopyBtn` takes a getter (not a plain string) so
+it always reads the current text at click time, not whatever it was when
+the button was built. Uses `navigator.clipboard.writeText`, falling back to
+a hidden-textarea + `execCommand('copy')` for contexts without the async
+Clipboard API. Shows "Copied" (or "Copy failed") on the button itself for
+1.4s, the same transient-feedback pattern as the quote/question "Keep"
+buttons elsewhere in the file.
+
 ## Configuration
 
 None. There are no environment variables, no `.env` file, and no build-time

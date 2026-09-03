@@ -689,7 +689,27 @@
     color: rgba(42,36,16,0.42);
     margin-top: 0.3rem;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
+
+  .note__copy {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(42,36,16,0.42);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.15rem 0.3rem;
+    margin: -0.15rem -0.3rem;
+    transition: color .15s ease;
+  }
+  .note__copy:hover { color: rgba(42,36,16,0.85); }
+  .note__copy:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
 
   /* ---- Reflect (bring-your-own-model, per-note) ---- */
   .reflect {
@@ -1244,6 +1264,49 @@
     return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  // ---- Copy to clipboard (notes + keepsakes) ----
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback for browsers/contexts without the async Clipboard API
+    // (e.g. a plain file:// page in an older WebKit).
+    return new Promise(function (resolve, reject) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('execCommand failed'));
+      } catch (e) { reject(e); }
+    });
+  }
+
+  function buildCopyBtn(getText) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'note__copy';
+    btn.textContent = 'Copy';
+    btn.setAttribute('aria-label', 'Copy text');
+    var resetTimer = null;
+    btn.addEventListener('click', function () {
+      copyToClipboard(getText()).then(function () {
+        btn.textContent = 'Copied';
+      }).catch(function () {
+        btn.textContent = 'Copy failed';
+      }).then(function () {
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(function () { btn.textContent = 'Copy'; }, 1400);
+      });
+    });
+    return btn;
+  }
+
   function sortNotes(direction) {
     notes.sort(function (a, b) {
       var ad = a.createdAt || 0, bd = b.createdAt || 0;
@@ -1403,7 +1466,10 @@
 
       var meta = document.createElement('div');
       meta.className = 'note__meta';
-      meta.textContent = fmtRelative(note.createdAt);
+      var metaDate = document.createElement('span');
+      metaDate.textContent = fmtRelative(note.createdAt);
+      meta.appendChild(metaDate);
+      meta.appendChild(buildCopyBtn(function () { return note.text; }));
 
       card.appendChild(handle);
       card.appendChild(actions);
@@ -1543,7 +1609,10 @@
 
       var meta = document.createElement('div');
       meta.className = 'note__meta';
-      meta.textContent = 'Kept ' + fmtKeptDate(keepsake.keptAt);
+      var metaDate = document.createElement('span');
+      metaDate.textContent = 'Kept ' + fmtKeptDate(keepsake.keptAt);
+      meta.appendChild(metaDate);
+      meta.appendChild(buildCopyBtn(function () { return keepsake.text; }));
 
       card.appendChild(actions);
       card.appendChild(text);
