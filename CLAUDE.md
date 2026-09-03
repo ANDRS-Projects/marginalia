@@ -130,18 +130,27 @@ one note's text — see the Storage & Privacy note in the README before
 changing what this sends.
 
 **Background picker.** `.plates` (search `index.html` for "Illustrated
-background") holds one `<img>` per plate — birds (owl + sparrowhawk) and a
-botanical — and shows only the active set via a `data-bg` attribute on the
-container, driven by CSS (`.plates[data-bg="…"] …`), not by adding/removing
-DOM nodes. The "BG" button next to the sync gear opens a small panel (three
-buttons, `aria-pressed` marks the current one); picking one calls
+background") holds one `<img>` per plate — birds (owl + sparrowhawk),
+botanical, and Merian (hand-coloured) — and shows only the active set via a
+`data-bg` attribute on the container, driven by CSS (`.plates[data-bg="…"]
+…`), not by adding/removing DOM nodes. The "BG" button next to the sync
+gear opens a small panel (four buttons, `aria-pressed` marks the current
+one, sized smaller than the sync/AI Save/Clear buttons — see the
+`#bgSettings` override, which exists because four buttons at the touch-
+target size overflow the drawer where two always fit); picking one calls
 `chooseBackground()`, which applies immediately and persists to
 `localStorage` (`marginalia:background`) — no Save step, since it's a
-cosmetic preference rather than a credential. Adding a fourth plate is:
-another `<img class="plates__yourname">` in the markup, a CSS rule sizing
-and positioning it plus a `.plates[data-bg="yourname"] .plates__yourname {
-display: block; }` rule, and a fourth button in `#bgSettings` wired the
-same way as the existing three.
+cosmetic preference rather than a credential. A hand-coloured plate needs
+one more thing the monochrome ones don't: exempt it from the dark-mode
+`filter: invert(1)` (inverting colour produces its ugly complement, not a
+tasteful dark version) with a higher-specificity rule — e.g.
+`:root:not([data-theme="light"]) .plates .plates__merian { opacity: …;
+filter: saturate(0.8); }` — instead of inverting it. Adding another plate
+is: another `<img class="plates__yourname">` in the markup, a CSS rule
+sizing and positioning it plus a `.plates[data-bg="yourname"]
+.plates__yourname { display: block; }` rule (and, if hand-coloured, the
+dark-mode exemption above), and a fourth button in `#bgSettings` wired the
+same way as the existing ones.
 
 ## Configuration
 

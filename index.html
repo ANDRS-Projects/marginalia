@@ -97,8 +97,11 @@
   .plates[data-bg="botanical"] .plates__botanical {
     display: block;
   }
+  .plates[data-bg="merian"] .plates__merian {
+    display: block;
+  }
 
-  .plates__owl { top: -40px; right: -18px; width: 280px; }
+  .plates__owl { top: -25px; right: -18px; width: 280px; }
   .plates__hawk { bottom: -18px; left: -58px; width: 320px; }
 
   /* Botanical plate — centred, cropped by the page edge like a plate
@@ -114,15 +117,38 @@
     opacity: 0.16;
   }
 
+  /* Merian plate — hand-coloured (butterflies either side of the title, a
+     pomegranate below the shelf), so unlike the two monochrome plates
+     above it keeps its own opacity/positioning tuning and is explicitly
+     exempted from the dark-mode invert below (inverting colour would turn
+     it into its complement, not a tasteful dark version — see
+     marginalia-background-3a-handoff.md). */
+  .plates .plates__merian {
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 960px;
+    opacity: 0.2;
+  }
+
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .plates img { filter: invert(1); }
+    :root:not([data-theme="light"]) .plates .plates__merian {
+      opacity: 0.12;
+      filter: saturate(0.8);
+    }
   }
   :root[data-theme="dark"] .plates img { filter: invert(1); }
+  :root[data-theme="dark"] .plates .plates__merian {
+    opacity: 0.12;
+    filter: saturate(0.8);
+  }
 
   @media (max-width: 640px) {
-    .plates__owl { width: 190px; top: -26px; right: -12px; }
+    .plates__owl { width: 190px; top: -17px; right: -12px; }
     .plates__hawk { width: 216px; bottom: -12px; left: -42px; }
     .plates .plates__botanical { height: 620px; bottom: -20px; }
+    .plates .plates__merian { height: 680px; bottom: -14px; }
   }
 
   .canvas {
@@ -604,7 +630,7 @@
     top: 2px;
     right: 4px;
     display: flex;
-    gap: 0.05rem;
+    gap: 0.15rem;
   }
 
   .note__keep, .note__delete, .note__restore {
@@ -621,8 +647,10 @@
   .note__keep:focus-visible, .note__delete:focus-visible, .note__restore:focus-visible { outline: 2px solid rgba(42,36,16,0.5); outline-offset: 1px; }
 
   /* ❧ and ↩ are finer, lower-contrast glyphs than × — size and darken them
-     so they actually read at a glance instead of looking like a stray mark. */
-  .note__keep, .note__restore { font-size: 1.15rem; color: rgba(42,36,16,0.55); }
+     so they actually read at a glance instead of looking like a stray mark.
+     Sized up again (was 1.15rem/0.55) — still too small to tell apart from
+     the × next to it at the original size. */
+  .note__keep, .note__restore { font-size: 1.5rem; color: rgba(42,36,16,0.68); }
 
   .note__handle {
     position: absolute;
@@ -754,6 +782,15 @@
     background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
+  /* The background picker has four buttons where every other settings
+     panel only ever had two — the Save/Clear touch-target size above
+     overflows the drawer here, so match the smaller Newest/Oldest sizing
+     instead. */
+  #bgSettings .sync-settings__actions .sort-btn {
+    padding: 0.25rem 0.55rem;
+    min-height: 0;
+  }
+
   .sr-only {
     position: absolute;
     width: 1px; height: 1px;
@@ -835,6 +872,7 @@
   <img class="plates__owl" src="bewick-owl-ink.png" alt="">
   <img class="plates__hawk" src="bewick-sparrowhawk-ink.png" alt="">
   <img class="plates__botanical" src="plate-gentolissima-ink.png" alt="">
+  <img class="plates__merian" src="merian-pomegranate.png" alt="">
 </div>
 
 <main class="canvas">
@@ -932,6 +970,7 @@
     <div class="sync-settings__actions">
       <button class="sort-btn" id="bgBirdsBtn" type="button" aria-pressed="true">Birds</button>
       <button class="sort-btn" id="bgBotanicalBtn" type="button" aria-pressed="false">Botanical</button>
+      <button class="sort-btn" id="bgMerianBtn" type="button" aria-pressed="false">Butterflies</button>
       <button class="sort-btn" id="bgNoneBtn" type="button" aria-pressed="false">None</button>
     </div>
   </div>
@@ -993,6 +1032,7 @@
   var bgSettings = document.getElementById('bgSettings');
   var bgBirdsBtn = document.getElementById('bgBirdsBtn');
   var bgBotanicalBtn = document.getElementById('bgBotanicalBtn');
+  var bgMerianBtn = document.getElementById('bgMerianBtn');
   var bgNoneBtn = document.getElementById('bgNoneBtn');
   var platesEl = document.querySelector('.plates');
 
@@ -1836,12 +1876,12 @@
   // so unlike sync/AI settings above there's no Save/Clear step — picking
   // an option applies and persists it immediately.
   var BACKGROUND_KEY = 'marginalia:background';
-  var BACKGROUND_BTNS = { birds: bgBirdsBtn, botanical: bgBotanicalBtn, none: bgNoneBtn };
+  var BACKGROUND_BTNS = { birds: bgBirdsBtn, botanical: bgBotanicalBtn, merian: bgMerianBtn, none: bgNoneBtn };
 
   function getBackgroundChoice() {
     try {
       var v = localStorage.getItem(BACKGROUND_KEY);
-      return (v === 'botanical' || v === 'none') ? v : 'birds';
+      return (v === 'botanical' || v === 'merian' || v === 'none') ? v : 'birds';
     } catch (e) { return 'birds'; }
   }
 
@@ -1865,6 +1905,7 @@
 
   bgBirdsBtn.addEventListener('click', function () { chooseBackground('birds'); });
   bgBotanicalBtn.addEventListener('click', function () { chooseBackground('botanical'); });
+  bgMerianBtn.addEventListener('click', function () { chooseBackground('merian'); });
   bgNoneBtn.addEventListener('click', function () { chooseBackground('none'); });
 
   render();
