@@ -32,6 +32,17 @@ runner exist in this repo.
 index.html   # everything: HTML structure, <style> CSS, and three <script> blocks
 ```
 
+A normal document — `<!doctype html>`, `<html>`, a real `<head>` (meta,
+`<link>`s, the `<style>` block) and `<body>` (markup + the three `<script>`
+blocks below). Earlier versions of this file were still shaped like a
+Claude Artifact's `file_path` content (no doctype/head/body at all, with a
+runtime script that hoisted meta/link tags into `document.head` on load,
+since Artifacts place that content in `<body>`) — that workaround is gone
+now that this is a plain static file with no Artifact host to work around.
+Keep it that way; don't reintroduce Artifact-specific markup here even if
+a future feature is built against the private/Artifact copy first — port
+it as a real `<head>` addition, not a tag needing runtime hoisting.
+
 One file, three inline `<script>` blocks, each an IIFE with its own concern:
 
 1. **Sticky notes + Keepsakes** — renders/edits/deletes notes, persists them,
