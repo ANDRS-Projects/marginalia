@@ -78,8 +78,9 @@ See [CLAUDE.md](CLAUDE.md) for the full command reference and architecture.
 ## How it works
 
 Marginalia is a single self-contained `index.html` file — no build step, no
-server, and no dependencies except a Google Fonts CDN stylesheet and a couple
-of embedded `data:` URI images (the app icon). You can:
+server, and no dependencies except a Google Fonts CDN stylesheet and a
+handful of real image files alongside it (the app icons, and the
+illustrated background plates). You can:
 
 1. **Visit it hosted** via GitHub Pages — the repo serves `index.html` from
    the default branch root at

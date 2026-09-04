@@ -1,2 +1,5 @@
 FORK_REPORT.md
 SANITIZATION_REPORT.md
+
+# Local Claude Code dev memory — never publish to this public repo.
+.claude/
