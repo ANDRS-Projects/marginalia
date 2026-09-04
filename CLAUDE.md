@@ -51,9 +51,20 @@ One file, three inline `<script>` blocks, each an IIFE with its own concern:
    to Dock" (macOS Safari) prompt, since Safari has no native install prompt.
 
 The only external network dependency is a Google Fonts CDN `<link>`
-(Fraunces, Public Sans, IBM Plex Mono, Caveat). The PWA manifest and app icons
-are embedded as `data:` URIs directly in the `<head>` — no separate icon files
-or `manifest.json` on disk.
+(Fraunces, Public Sans, IBM Plex Mono, Caveat). The PWA manifest
+(`manifest.json`) and app icons (`icon-512.png`, `apple-touch-icon.png`) are
+real files on disk, not `data:` URIs embedded in the `<head>` — this
+mattered concretely, not just for tidiness: a `data:` URI manifest has no
+URL of its own, so the browser has nothing to compute a default `scope`
+from, and (at least in Chrome) fell back to treating the whole
+`andrs-projects.github.io` origin as in-scope, meaning visiting *any other*
+project page under that org showed Marginalia's install banner/prompt.
+`manifest.json` sets `"scope": "/marginalia/"` explicitly, which fixes it
+outright regardless of any inference behavior. Glyph Press never had this
+bug because it already used a real external `manifest.json`. If a future
+Tiny Tools app's manifest ever needs to go back to a `data:` URI (e.g. for
+a single-file Artifact-hosted variant), give it an explicit `scope` too —
+inference is not reliable enough to skip it.
 
 ## Key Files
 
