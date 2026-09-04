@@ -1,3 +1,6 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Marginalia</title>
@@ -860,28 +863,8 @@
   .install-banner__dismiss:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 </style>
-
-<script>
-(function () {
-  try {
-    var head = document.head;
-    var selectors = [
-      'link[rel="apple-touch-icon"]',
-      'link[rel="icon"]',
-      'link[rel="manifest"]',
-      'meta[name="apple-mobile-web-app-capable"]',
-      'meta[name="apple-mobile-web-app-title"]',
-      'meta[name="theme-color"]'
-    ];
-    selectors.forEach(function (sel) {
-      document.querySelectorAll(sel).forEach(function (el) {
-        if (el.parentNode !== head) head.appendChild(el);
-      });
-    });
-  } catch (e) {}
-})();
-</script>
-
+</head>
+<body>
 
 <div class="install-banner" id="installBanner">
   <span id="installBannerText"></span>
@@ -2282,6 +2265,8 @@
   } catch (e) {}
 })();
 </script>
+</body>
+</html>
 
 
 
