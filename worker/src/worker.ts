@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type MiddlewareHandler } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
 
@@ -15,6 +15,28 @@ const app = new Hono<{ Bindings: Env }>();
 // versions of the same artifact).
 app.use('/notes', cors());
 app.use('/keepsakes', cors());
+
+// Rate limit both routes before the auth check, keyed by IP. Free, harmless, and adds
+// some friction, but don't rely on this as the real defense against
+// brute-forcing API_KEY — Cloudflare's own docs describe this binding as
+// "eventually consistent" and enforced per-isolate/per-datacenter rather
+// than with one global counter, so it's a loose filter, not a guarantee
+// (confirmed empirically: 100+ rapid requests here didn't reliably trip
+// it). The actual defense is API_KEY's length — a 256-bit random string
+// (openssl rand -hex 32, per the README) makes brute-forcing infeasible
+// regardless of how many guesses get through.
+// https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/
+const rateLimit: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
+  const { success } = await c.env.RATE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return c.json({ error: 'Rate limit exceeded' }, 429);
+  }
+  await next();
+};
+app.use('/notes', rateLimit);
+app.use('/keepsakes', rateLimit);
+
 app.use('/notes', async (c, next) => {
   const key = c.req.header('X-API-Key');
   if (!key || key !== c.env.API_KEY) {

@@ -7,4 +7,7 @@ export interface Env {
   // Shared secret the page must send as `X-API-Key` on every request.
   // Set with: wrangler secret put API_KEY
   API_KEY: string;
+
+  // Rate limit binding — see wrangler.toml's [[ratelimits]] block.
+  RATE_LIMITER: RateLimit;
 }

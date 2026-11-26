@@ -9,4 +9,17 @@ workers_dev = true
 binding = "NOTES"
 id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
+# Rate limit on /notes (30 requests/minute per IP), mainly to slow down
+# anyone trying to brute-force API_KEY. No provisioning needed — namespace_id
+# is just an arbitrary number you pick, unique within your Cloudflare
+# account (it only matters if you run multiple rate-limited Workers on the
+# same account and want them to share, or not share, counters).
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 # Set your shared secret with:  wrangler secret put API_KEY
